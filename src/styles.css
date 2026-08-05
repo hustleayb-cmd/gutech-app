@@ -1703,6 +1703,60 @@ nav button[data-on='1'] {
 
 .study-sound-note { margin-top: 10px; font-size: 11px; color: var(--text-dim); text-align: center; }
 
+/* ============ PROJECT ROOMS ============ */
+.room-card { cursor: pointer; }
+
+.avatar-stack { display: flex; }
+
+.avatar-chip {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  border: 2px solid var(--bg-surface);
+  margin-left: -8px;
+  flex-shrink: 0;
+}
+.avatar-stack .avatar-chip:first-child { margin-left: 0; }
+
+.room-progress-mini {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gu-blue);
+}
+
+.room-progress-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.room-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 87, 168, 0.12);
+  overflow: hidden;
+}
+
+.room-progress-fill {
+  height: 100%;
+  background: var(--gu-blue);
+  border-radius: var(--radius-pill);
+  transition: width 0.4s var(--ease-out);
+}
+
+.role-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 10px; }

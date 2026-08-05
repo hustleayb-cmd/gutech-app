@@ -254,6 +254,192 @@ create policy "own memberships delete" on club_memberships
   for delete using (auth.uid() = user_id);
 
 -- ============================================================
+-- PROJECT ROOMS — collaborative group workspace (More → Projects)
+-- The one place in this app where data is shared among several
+-- students (room members) instead of private to one user. Membership
+-- checks go through a security-definer helper function so policies on
+-- room_members don't recursively re-trigger RLS on itself.
+-- ============================================================
+
+create table if not exists project_rooms (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text not null default '',
+  due_date date,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists room_members (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references project_rooms(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'Member',
+  color_index int not null default 0,
+  status text not null default 'accepted', -- accepted | pending — invite flow lands in a later phase
+  joined_at timestamptz not null default now(),
+  unique (room_id, user_id)
+);
+
+create index if not exists idx_room_members_room on room_members(room_id);
+create index if not exists idx_room_members_user on room_members(user_id);
+
+create or replace function public.is_room_member(target_room_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from room_members
+    where room_id = target_room_id and user_id = auth.uid() and status = 'accepted'
+  );
+$$;
+
+-- Auto-add the creator as the room's first member (role: Lead) the
+-- moment a room is created — keeps client code from needing two
+-- separate inserts that could fail independently.
+create or replace function public.add_room_creator_as_member()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into room_members (room_id, user_id, role, status)
+  values (new.id, new.created_by, 'Lead', 'accepted')
+  on conflict (room_id, user_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists project_rooms_add_creator on project_rooms;
+create trigger project_rooms_add_creator after insert on project_rooms
+  for each row execute function public.add_room_creator_as_member();
+
+create table if not exists project_tasks (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references project_rooms(id) on delete cascade,
+  title text not null,
+  description text not null default '',
+  column_name text not null default 'backlog', -- backlog | todo | in_progress | review | done
+  assignee_id uuid references auth.users(id) on delete set null,
+  priority_flag boolean not null default false,
+  due_date date,
+  position int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_tasks_room on project_tasks(room_id);
+
+create table if not exists task_checklist_items (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references project_tasks(id) on delete cascade,
+  title text not null,
+  is_complete boolean not null default false,
+  position int not null default 0
+);
+
+create index if not exists idx_checklist_task on task_checklist_items(task_id);
+
+create table if not exists task_comments (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references project_tasks(id) on delete cascade,
+  author_id uuid not null references auth.users(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_comments_task on task_comments(task_id);
+
+create table if not exists room_activity (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references project_rooms(id) on delete cascade,
+  actor_id uuid references auth.users(id) on delete set null,
+  action text not null,
+  detail text default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_activity_room on room_activity(room_id, created_at desc);
+
+alter table project_rooms enable row level security;
+alter table room_members enable row level security;
+alter table project_tasks enable row level security;
+alter table task_checklist_items enable row level security;
+alter table task_comments enable row level security;
+alter table room_activity enable row level security;
+
+-- project_rooms
+drop policy if exists "room members can view room" on project_rooms;
+create policy "room members can view room" on project_rooms
+  for select using (public.is_room_member(id));
+drop policy if exists "authenticated users can create rooms" on project_rooms;
+create policy "authenticated users can create rooms" on project_rooms
+  for insert with check (auth.uid() = created_by);
+drop policy if exists "creator can update room" on project_rooms;
+create policy "creator can update room" on project_rooms
+  for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+drop policy if exists "creator can delete room" on project_rooms;
+create policy "creator can delete room" on project_rooms
+  for delete using (auth.uid() = created_by);
+
+-- room_members
+drop policy if exists "room members can view membership" on room_members;
+create policy "room members can view membership" on room_members
+  for select using (public.is_room_member(room_id));
+drop policy if exists "user can insert own membership" on room_members;
+create policy "user can insert own membership" on room_members
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "user can update own membership" on room_members;
+create policy "user can update own membership" on room_members
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "user can leave room" on room_members;
+create policy "user can leave room" on room_members
+  for delete using (auth.uid() = user_id);
+
+-- project_tasks
+drop policy if exists "room members can view tasks" on project_tasks;
+create policy "room members can view tasks" on project_tasks
+  for select using (public.is_room_member(room_id));
+drop policy if exists "room members can insert tasks" on project_tasks;
+create policy "room members can insert tasks" on project_tasks
+  for insert with check (public.is_room_member(room_id));
+drop policy if exists "room members can update tasks" on project_tasks;
+create policy "room members can update tasks" on project_tasks
+  for update using (public.is_room_member(room_id)) with check (public.is_room_member(room_id));
+drop policy if exists "room members can delete tasks" on project_tasks;
+create policy "room members can delete tasks" on project_tasks
+  for delete using (public.is_room_member(room_id));
+
+-- task_checklist_items (membership checked via the parent task's room)
+drop policy if exists "room members can view checklist" on task_checklist_items;
+create policy "room members can view checklist" on task_checklist_items
+  for select using (exists (select 1 from project_tasks t where t.id = task_id and public.is_room_member(t.room_id)));
+drop policy if exists "room members can insert checklist" on task_checklist_items;
+create policy "room members can insert checklist" on task_checklist_items
+  for insert with check (exists (select 1 from project_tasks t where t.id = task_id and public.is_room_member(t.room_id)));
+drop policy if exists "room members can update checklist" on task_checklist_items;
+create policy "room members can update checklist" on task_checklist_items
+  for update using (exists (select 1 from project_tasks t where t.id = task_id and public.is_room_member(t.room_id)));
+drop policy if exists "room members can delete checklist" on task_checklist_items;
+create policy "room members can delete checklist" on task_checklist_items
+  for delete using (exists (select 1 from project_tasks t where t.id = task_id and public.is_room_member(t.room_id)));
+
+-- task_comments
+drop policy if exists "room members can view comments" on task_comments;
+create policy "room members can view comments" on task_comments
+  for select using (exists (select 1 from project_tasks t where t.id = task_id and public.is_room_member(t.room_id)));
+drop policy if exists "room members can insert comments" on task_comments;
+create policy "room members can insert comments" on task_comments
+  for insert with check (auth.uid() = author_id and exists (select 1 from project_tasks t where t.id = task_id and public.is_room_member(t.room_id)));
+
+-- room_activity
+drop policy if exists "room members can view activity" on room_activity;
+create policy "room members can view activity" on room_activity
+  for select using (public.is_room_member(room_id));
+drop policy if exists "room members can log activity" on room_activity;
+create policy "room members can log activity" on room_activity
+  for insert with check (public.is_room_member(room_id));
+
+-- ============================================================
 -- VERIFY: after running, this should return 4 rows per table
 -- for notes, reminders, grades and club_memberships; 3 rows for
 -- profiles; 1 row each for announcements and clubs

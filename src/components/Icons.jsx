@@ -60,3 +60,4 @@ export const PauseIcon = (p) => <Icon {...p}><rect x="5.5" y="4.5" width="4.5" h
 export const StopIcon = (p) => <Icon {...p}><rect x="5" y="5" width="14" height="14" rx="2.5" /></Icon>;
 export const ResetIcon = (p) => <Icon {...p}><path d="M4.5 12a7.5 7.5 0 1 1 2.3 5.4" /><path d="M4.5 17v-4.5H9" /></Icon>;
 export const SoundIcon = (p) => <Icon {...p}><path d="M4.5 10v4a1 1 0 0 0 1 1h2.7l4.3 3.6a.6.6 0 0 0 1-.46V5.86a.6.6 0 0 0-1-.46L8.2 9H5.5a1 1 0 0 0-1 1Z" /><path d="M16.5 9.5c.9.7 1.5 1.7 1.5 2.9s-.6 2.2-1.5 2.9M19 7.5c1.5 1.2 2.5 3 2.5 5s-1 3.8-2.5 5" /></Icon>;
+export const BoardIcon = (p) => <Icon {...p}><rect x="3.5" y="4" width="17" height="16" rx="2" /><path d="M8.5 4v16M15.5 4v16M6 8h1.2M6 11h1.2M17.2 8h1M17.2 11h1M17.2 14h1" /></Icon>;
