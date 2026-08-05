@@ -31,7 +31,7 @@ select tablename, policyname from pg_policies
 where tablename in ('notes','reminders','profiles','grades','announcements','clubs','club_memberships') order by tablename;
 ```
 
-You should see **26 rows** (4 policies each for notes, reminders, grades, club_memberships; 3 for profiles; 1 each for announcements, clubs). If you see fewer, RLS isn't fully on and some data could leak between users. Don't skip this check.
+You should see **20 rows** (4 policies each for notes, reminders, grades; 3 each for profiles and club_memberships; 1 each for announcements and clubs). If you see fewer, RLS isn't fully on and some data could leak between users. Don't skip this check.
 
 > **Already running the app from before this update?** Your existing
 > Supabase project only has `notes` and `reminders`. Re-run `schema.sql` —
