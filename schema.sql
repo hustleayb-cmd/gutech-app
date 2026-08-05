@@ -184,9 +184,66 @@ insert into announcements (title, body, category, pinned) values
 on conflict do nothing;
 
 -- ============================================================
+-- CLUBS — student clubs directory (More → Clubs)
+-- Read-only from the app, same pattern as announcements: post new
+-- clubs yourself from the SQL editor.
+-- ============================================================
+create table if not exists clubs (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text not null default 'general', -- sport | tech | arts | music | business | culture | academic | volunteering | general
+  description text not null default '',
+  created_at timestamptz not null default now()
+);
+
+alter table clubs enable row level security;
+
+drop policy if exists "clubs select signed in" on clubs;
+create policy "clubs select signed in" on clubs
+  for select using (auth.role() = 'authenticated');
+
+insert into clubs (name, category, description) values
+  ('Football Club', 'sport', 'Weekly matches and a campus league — all skill levels welcome.'),
+  ('Robotics Club', 'tech', 'Design, build and compete with autonomous robots.'),
+  ('Photography Club', 'arts', 'Campus photo walks, editing workshops and exhibitions.'),
+  ('Music Society', 'music', 'Jam sessions, open mic nights and the end-of-year showcase.'),
+  ('Entrepreneurship Club', 'business', 'Pitch practice, startup mentoring and founder talks.'),
+  ('Cultural Exchange Club', 'culture', 'Celebrating GUtech''s international student community.'),
+  ('Debate Society', 'academic', 'Weekly debates and public speaking practice.'),
+  ('Community Outreach', 'volunteering', 'Volunteering days across Muscat and Halban.')
+on conflict do nothing;
+
+-- ---------- MEMBERSHIPS — who's joined what ----------
+-- Private per student: you can only see, add and remove your own
+-- membership rows, never another student's.
+create table if not exists club_memberships (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  club_id uuid not null references clubs(id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  unique (user_id, club_id)
+);
+
+create index if not exists idx_memberships_user on club_memberships(user_id);
+
+alter table club_memberships enable row level security;
+
+drop policy if exists "own memberships select" on club_memberships;
+create policy "own memberships select" on club_memberships
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "own memberships insert" on club_memberships;
+create policy "own memberships insert" on club_memberships
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "own memberships delete" on club_memberships;
+create policy "own memberships delete" on club_memberships
+  for delete using (auth.uid() = user_id);
+
+-- ============================================================
 -- VERIFY: after running, this should return 4 rows per table
--- for notes, reminders, grades and 3 rows for profiles,
--- 1 row for announcements
+-- for notes, reminders, grades and club_memberships; 3 rows for
+-- profiles; 1 row each for announcements and clubs
 -- ============================================================
 -- select tablename, policyname from pg_policies
--- where tablename in ('notes','reminders','profiles','grades','announcements') order by tablename;
+-- where tablename in ('notes','reminders','profiles','grades','announcements','clubs','club_memberships') order by tablename;

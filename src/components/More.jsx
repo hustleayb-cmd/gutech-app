@@ -1,9 +1,10 @@
 import { supabase } from '../supabase';
-import { BellIcon, ChartIcon, MegaphoneIcon, MapPinIcon, UserIcon, SignOutIcon, CloseIcon } from './Icons';
+import { BellIcon, ChartIcon, MegaphoneIcon, MapPinIcon, UserIcon, UsersIcon, SignOutIcon, CloseIcon } from './Icons';
 
 const ITEMS = [
   { tab: 'due', label: 'Due', hint: 'Assignments & deadlines', Icon: BellIcon },
   { tab: 'grades', label: 'Grades', hint: 'Courses & GPA', Icon: ChartIcon },
+  { tab: 'clubs', label: 'Clubs', hint: 'Join a club', Icon: UsersIcon },
   { tab: 'announcements', label: 'Announcements', hint: 'Campus news', Icon: MegaphoneIcon },
   { tab: 'campus', label: 'Campus', hint: 'Map & services', Icon: MapPinIcon },
   { tab: 'profile', label: 'Profile', hint: 'Your student ID', Icon: UserIcon },

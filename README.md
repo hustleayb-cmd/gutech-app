@@ -1,14 +1,14 @@
 # GUtech Student Companion
 
 A demo app with real authentication, branded for GUtech (German University of
-Technology in Oman). Nine sections: **Home** (dashboard), **Ask** (your n8n
+Technology in Oman). Ten sections: **Home** (dashboard), **Ask** (your n8n
 bot), **Calendar**, **Notes**, **Due** (reminders), **Grades** (GPA tracker),
-**Announcements**, **Campus** (map & services directory), and **Profile**
-(student ID card).
+**Clubs** (join a club), **Announcements**, **Campus** (map & services
+directory), and **Profile** (student ID card).
 
-Each student sees only their own notes, reminders, grades and profile,
-enforced at the database level. Announcements are read-only and shared by
-everyone signed in.
+Each student sees only their own notes, reminders, grades, club memberships
+and profile, enforced at the database level. Announcements and the clubs
+directory are read-only and shared by everyone signed in.
 
 ---
 
@@ -18,20 +18,20 @@ everyone signed in.
 
 Supabase → **SQL Editor** → **New query** → paste the contents of `schema.sql` → **Run**.
 
-This creates the `notes`, `reminders`, `profiles`, `grades` and
-`announcements` tables and — importantly — the Row Level Security policies
-that keep each student's data private. It also seeds three sample
-announcements so the Announcements tab and Home dashboard aren't empty on
-first run.
+This creates the `notes`, `reminders`, `profiles`, `grades`, `announcements`,
+`clubs` and `club_memberships` tables and — importantly — the Row Level
+Security policies that keep each student's data private. It also seeds
+sample announcements and clubs so those tabs and the Home dashboard aren't
+empty on first run.
 
 Verify it worked:
 
 ```sql
 select tablename, policyname from pg_policies
-where tablename in ('notes','reminders','profiles','grades','announcements') order by tablename;
+where tablename in ('notes','reminders','profiles','grades','announcements','clubs','club_memberships') order by tablename;
 ```
 
-You should see **19 rows** (4 policies each for notes, reminders, grades; 3 for profiles; 1 for announcements). If you see fewer, RLS isn't fully on and some data could leak between users. Don't skip this check.
+You should see **26 rows** (4 policies each for notes, reminders, grades, club_memberships; 3 for profiles; 1 each for announcements, clubs). If you see fewer, RLS isn't fully on and some data could leak between users. Don't skip this check.
 
 > **Already running the app from before this update?** Your existing
 > Supabase project only has `notes` and `reminders`. Re-run `schema.sql` —
@@ -102,6 +102,36 @@ The app sends the signed-in user's ID as `sessionId`, so each student gets their
 
 ---
 
+## Connecting club-join emails to n8n
+
+When a student taps **Join** on a club (More → Clubs), the app can fire a
+webhook so an n8n workflow sends them a confirmation email — using their
+name, student ID and program from the Profile tab, plus the club they
+joined. Optional; the Join button works fine without it, it just skips the
+email.
+
+1. In n8n, create a new workflow with a **Webhook** node (not Chat Trigger this time)
+2. Set it to accept **POST**, copy its URL
+3. After the webhook node, add whatever sends the email (an **Email** / **Gmail** / **SMTP** node)
+4. The webhook receives this JSON body:
+   ```json
+   {
+     "action": "club_join",
+     "email": "student@example.com",
+     "full_name": "Student Name",
+     "student_id": "20231234",
+     "program": "Computer Science",
+     "club_name": "Robotics Club",
+     "club_category": "tech"
+   }
+   ```
+5. Paste the webhook URL into `VITE_N8N_CLUB_JOIN_WEBHOOK` in `.env`
+6. **Activate the workflow**, restart `npm run dev`
+
+Same CORS note as the Chat webhook: if you see a CORS error, add your origin to the webhook node's allowed origins, or use `*` for a demo.
+
+---
+
 ## Testing the privacy boundary
 
 Worth doing before you demo, because it's the thing people ask about:
@@ -148,10 +178,11 @@ src/
     Auth.jsx                 sign in / sign up
     Home.jsx                 dashboard: due-soon, GPA snapshot, quick links, latest announcement
     Chat.jsx                  talks to the n8n webhook (Ask tab)
-    Calendar.jsx               weekly timetable, built from Notes' scheduled fields
+    Calendar.jsx               week/month views + day agenda, live-synced with Notes and Reminders
     Notes.jsx                   notes CRUD + daily timetable view
     Reminders.jsx                reminders CRUD + browser notifications (Due tab)
     Grades.jsx                    course/grade CRUD + GPA ring
+    Clubs.jsx                      club directory, join/leave, per-category hover animation
     Announcements.jsx              read-only campus news feed
     Campus.jsx                      map embed + services directory
     Profile.jsx                     editable student ID card
@@ -160,7 +191,7 @@ src/
 
 Navigation is split in two: **Home / Ask / Calendar / Notes** sit in the
 bottom bar (capped at four plus More — more than five items in a bottom bar
-hurts usability); **Due / Grades / Announcements / Campus / Profile** live
+hurts usability); **Due / Grades / Clubs / Announcements / Campus / Profile** live
 one tap away behind **More**.
 
 The GUtech wordmark (`Logo.jsx`) is reproduced in markup/CSS rather than a
