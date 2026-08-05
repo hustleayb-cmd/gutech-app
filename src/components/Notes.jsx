@@ -18,6 +18,17 @@ export default function Notes({ userId }) {
 
   useEffect(() => { load(); }, []);
 
+  // Live sync — a note added/edited/deleted from the Calendar tab (or
+  // another device) shows up here immediately, no tab switch needed.
+  useEffect(() => {
+    const channel = supabase
+      .channel('notes-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', filter: `user_id=eq.${userId}` },
+        () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId]);
+
   async function load() {
     const { data, error } = await supabase
       .from('notes')
