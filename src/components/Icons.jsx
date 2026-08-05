@@ -1,0 +1,43 @@
+// Hand-rolled line icons — no emoji, no extra dependency to install.
+// One consistent stroke (1.75, round caps/joins) across the whole set so
+// the icon language stays uniform everywhere it's used.
+const base = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.75,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+};
+
+function Icon({ children, size = 20, className, label }) {
+  return (
+    <svg {...base} width={size} height={size} className={className}
+         role={label ? 'img' : 'presentation'} aria-hidden={label ? undefined : true}
+         aria-label={label}>
+      {children}
+    </svg>
+  );
+}
+
+export const HomeIcon = (p) => <Icon {...p}><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9" /></Icon>;
+export const AskIcon = (p) => <Icon {...p}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8A2.5 2.5 0 0 1 17.5 16H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13.5v-8Z" /><path d="M8 8.5h8M8 11.5h5" /></Icon>;
+export const CalendarIcon = (p) => <Icon {...p}><rect x="3.5" y="5" width="17" height="16" rx="2.5" /><path d="M3.5 9.5h17M8 3v4M16 3v4" /></Icon>;
+export const NotesIcon = (p) => <Icon {...p}><path d="M6 3.5h9l3.5 3.5V20a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z" /><path d="M15 3.5V7h3.5" /><path d="M8 12h8M8 15.5h5" /></Icon>;
+export const MoreIcon = (p) => <Icon {...p}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" /></Icon>;
+export const BellIcon = (p) => <Icon {...p}><path d="M6 10a6 6 0 1 1 12 0c0 3.2 1 4.6 1.6 5.4a.9.9 0 0 1-.7 1.6H5.1a.9.9 0 0 1-.7-1.6C5 14.6 6 13.2 6 10Z" /><path d="M10 19.5a2 2 0 0 0 4 0" /></Icon>;
+export const ChartIcon = (p) => <Icon {...p}><path d="M4 20V10M11 20V4M18 20v-6" /><path d="M2.5 20h19" /></Icon>;
+export const MegaphoneIcon = (p) => <Icon {...p}><path d="M3.5 10.5v3a1 1 0 0 0 1 1H6l1.2 4.4a1 1 0 0 0 1 .7h1a1 1 0 0 0 1-1.2L9 14.5" /><path d="M4.5 10.5 15 6.2A2 2 0 0 1 18 8v8a2 2 0 0 1-3 1.7l-10.5-4.4a1 1 0 0 1 0-2.8Z" /><path d="M18 9.5c1.2.5 2 1.5 2 2.5s-.8 2-2 2.5" /></Icon>;
+export const MapPinIcon = (p) => <Icon {...p}><path d="M12 21s7-6.6 7-11.8A7 7 0 0 0 5 9.2C5 14.4 12 21 12 21Z" /><circle cx="12" cy="9.2" r="2.4" /></Icon>;
+export const UserIcon = (p) => <Icon {...p}><circle cx="12" cy="8" r="3.5" /><path d="M4.5 20c1-3.6 4-5.5 7.5-5.5s6.5 1.9 7.5 5.5" /></Icon>;
+export const SignOutIcon = (p) => <Icon {...p}><path d="M9 20H5.5A1.5 1.5 0 0 1 4 18.5v-13A1.5 1.5 0 0 1 5.5 4H9" /><path d="M16 16l4-4-4-4M20 12H9" /></Icon>;
+export const CloseIcon = (p) => <Icon {...p}><path d="M6 6l12 12M18 6 6 18" /></Icon>;
+export const ChevronLeft = (p) => <Icon {...p}><path d="M15 5l-7 7 7 7" /></Icon>;
+export const ChevronRight = (p) => <Icon {...p}><path d="M9 5l7 7-7 7" /></Icon>;
+export const PlusIcon = (p) => <Icon {...p}><path d="M12 5v14M5 12h14" /></Icon>;
+export const CheckIcon = (p) => <Icon {...p}><path d="M4.5 12.5l5 5 10-11" /></Icon>;
+export const TrashIcon = (p) => <Icon {...p}><path d="M4.5 7h15M9.5 7V4.8a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7M7 7l.7 12a1.5 1.5 0 0 0 1.5 1.4h5.6a1.5 1.5 0 0 0 1.5-1.4L17 7" /></Icon>;
+export const BookIcon = (p) => <Icon {...p}><path d="M4.5 5.2A1.2 1.2 0 0 1 5.7 4H12v16H5.7a1.2 1.2 0 0 1-1.2-1.2z" /><path d="M19.5 5.2A1.2 1.2 0 0 0 18.3 4H12v16h6.3a1.2 1.2 0 0 0 1.2-1.2z" /></Icon>;
+export const PinIcon = (p) => <Icon {...p}><path d="M12 2.5 15 8l5.5 1-4 4 1 5.5-5.5-3-5.5 3 1-5.5-4-4L8 8Z" /></Icon>;
+export const IdCardIcon = (p) => <Icon {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="11" r="2" /><path d="M6 16c.5-1.5 1.7-2.3 2.5-2.3s2 .8 2.5 2.3M14 9.5h4M14 12.5h4M14 15.5h2.5" /></Icon>;
+export const PhoneIcon = (p) => <Icon {...p}><path d="M6 3.5h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A15.5 15.5 0 0 1 4.5 5.1 1.5 1.5 0 0 1 6 3.5Z" /></Icon>;
