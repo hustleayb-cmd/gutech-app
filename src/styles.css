@@ -1560,6 +1560,149 @@ nav button[data-on='1'] {
 
 .nav-count { position: absolute; top: 2px; right: calc(50% - 20px); }
 
+/* ============ STUDY ROOM ============ */
+.study-suggestion { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+.study-card {
+  background: var(--gu-blue-tint);
+  border-color: rgba(0, 87, 168, 0.15);
+  padding: 24px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.study-status-pill { margin: 0; }
+.study-status-pill.status-running { color: var(--accent-success); background: rgba(31, 157, 107, 0.12); border-color: rgba(31, 157, 107, 0.25); }
+.study-status-pill.status-paused { color: var(--accent-amber); background: rgba(201, 134, 11, 0.12); border-color: rgba(201, 134, 11, 0.25); }
+
+.study-round-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--gu-blue);
+}
+
+.timer-ring-wrap { position: relative; width: 220px; height: 220px; margin: 6px 0 20px; }
+.timer-ring { width: 100%; height: 100%; }
+.timer-ring-track { fill: none; stroke: rgba(0, 87, 168, 0.12); stroke-width: 10; }
+.timer-ring-fill {
+  fill: none;
+  stroke: var(--gu-blue);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+.timer-ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+.timer-display {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-mode-label {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--gu-blue);
+}
+
+.duration-editor {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.duration-fill-track {
+  position: relative;
+  flex: 1;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 87, 168, 0.1);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.duration-fill-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(0, 87, 168, 0.22);
+  transition: width 0.25s var(--ease-out);
+}
+
+.duration-fill-label {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gu-blue-dark);
+}
+
+.round-dots-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.round-dots { display: flex; gap: 7px; }
+.round-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(0, 87, 168, 0.18); transition: background 0.25s var(--ease-out); }
+.round-dot.is-filled { background: var(--gu-blue); }
+
+.study-segmented { width: 100%; justify-content: center; margin-bottom: 20px; }
+
+.study-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  margin-bottom: 18px;
+}
+
+.study-transport-main {
+  width: 64px; height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--gu-blue);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 10px 22px -6px rgba(0, 87, 168, 0.4);
+  transition: all 0.2s var(--ease-spring);
+}
+.study-transport-main:hover { transform: translateY(-2px); }
+
+.sound-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.sound-name { font-size: 12.5px; font-weight: 700; color: var(--text-main); min-width: 72px; text-align: center; }
+.sound-selector .is-fav { color: var(--accent-alert); border-color: rgba(214, 69, 90, 0.3); }
+
+.study-sound-note { margin-top: 10px; font-size: 11px; color: var(--text-dim); text-align: center; }
+
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 10px; }
