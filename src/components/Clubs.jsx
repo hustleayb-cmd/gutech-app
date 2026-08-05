@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, CLUB_JOIN_WEBHOOK } from '../supabase';
-import { TrophyIcon, CodeIcon, PaletteIcon, MusicIcon, BriefcaseIcon, GlobeIcon, BookIcon, HeartIcon, UsersIcon, CheckIcon } from './Icons';
+import { TrophyIcon, CodeIcon, PaletteIcon, MusicIcon, BriefcaseIcon, GlobeIcon, BookIcon, HeartIcon, UsersIcon, CheckIcon, IdCardIcon } from './Icons';
 
 // Each category gets its own icon, tint, and hover animation (see the
 // .anim-* rules in styles.css) so hovering a card visually "reflects"
@@ -21,7 +21,7 @@ function metaFor(category) {
   return CATEGORY_META[category] || CATEGORY_META.general;
 }
 
-export default function Clubs({ userId, email }) {
+export default function Clubs({ userId, email, onNavigate }) {
   const [clubs, setClubs] = useState([]);
   const [joinedIds, setJoinedIds] = useState(new Set());
   const [profile, setProfile] = useState(null);
@@ -43,6 +43,10 @@ export default function Clubs({ userId, email }) {
     setProfile(p.data ?? null);
   }
 
+  // A club roster is only useful if it actually has the student's details —
+  // require name, student ID and program before Join does anything.
+  const profileComplete = !!(profile?.full_name?.trim() && profile?.student_id?.trim() && profile?.program?.trim());
+
   // Best-effort — a confirmation email is a nice-to-have, not something
   // that should block or fail the join itself if n8n is unreachable.
   async function notifyJoin(club) {
@@ -54,9 +58,9 @@ export default function Clubs({ userId, email }) {
         body: JSON.stringify({
           action: 'club_join',
           email,
-          full_name: profile?.full_name || '',
-          student_id: profile?.student_id || '',
-          program: profile?.program || '',
+          full_name: profile.full_name,
+          student_id: profile.student_id,
+          program: profile.program,
           club_name: club.name,
           club_category: club.category,
         }),
@@ -67,12 +71,22 @@ export default function Clubs({ userId, email }) {
   }
 
   async function toggleJoin(club) {
+    if (!profileComplete) return;
     setBusyId(club.id);
     setNotice('');
     const joined = joinedIds.has(club.id);
     const { error } = joined
       ? await supabase.from('club_memberships').delete().eq('user_id', userId).eq('club_id', club.id)
-      : await supabase.from('club_memberships').insert({ user_id: userId, club_id: club.id });
+      // Snapshot the student's profile onto the membership row itself —
+      // one table, filterable per club_id, no per-club table sprawl needed
+      // to answer "who's in Robotics Club and what's their student ID".
+      : await supabase.from('club_memberships').insert({
+          user_id: userId,
+          club_id: club.id,
+          full_name: profile.full_name,
+          student_id: profile.student_id,
+          program: profile.program,
+        });
     setBusyId(null);
     if (error) { setErr(error.message); return; }
 
@@ -97,10 +111,17 @@ export default function Clubs({ userId, email }) {
       {err && <div className="notice err">{err}</div>}
       {notice && <div className="notice ok">{notice}</div>}
 
-      {!profile?.full_name && (
-        <div className="notice">
-          Fill in your name on the Profile tab first — it's used on club
-          confirmation emails.
+      {!profileComplete && (
+        <div className="notice err profile-gate">
+          <div>
+            <strong>Finish your profile to join a club.</strong>
+            <p style={{ margin: '4px 0 0' }}>
+              Your name, student ID and program are needed — clubs use them to know who's a member.
+            </p>
+          </div>
+          <button type="button" className="ghost" onClick={() => onNavigate?.('profile')}>
+            <IdCardIcon size={14} /> Complete profile
+          </button>
         </div>
       )}
 
@@ -128,7 +149,8 @@ export default function Clubs({ userId, email }) {
                 type="button"
                 className={`club-join-btn ${joined ? 'is-joined' : ''}`}
                 onClick={() => toggleJoin(club)}
-                disabled={busyId === club.id}
+                disabled={busyId === club.id || (!profileComplete && !joined)}
+                title={!profileComplete && !joined ? 'Complete your profile first' : undefined}
               >
                 {joined ? <><CheckIcon size={13} /> Joined</> : 'Join'}
               </button>

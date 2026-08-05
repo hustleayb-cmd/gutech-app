@@ -216,15 +216,28 @@ on conflict do nothing;
 -- ---------- MEMBERSHIPS — who's joined what ----------
 -- Private per student: you can only see, add and remove your own
 -- membership rows, never another student's.
+-- full_name/student_id/program are a snapshot of the profile at the
+-- moment they joined — this one table answers "who's in club X and
+-- what's their student ID" per club_id, no per-club table needed.
 create table if not exists club_memberships (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   club_id uuid not null references clubs(id) on delete cascade,
+  full_name text not null default '',
+  student_id text not null default '',
+  program text not null default '',
   joined_at timestamptz not null default now(),
   unique (user_id, club_id)
 );
 
+-- safe to re-run on a database that already has the table from before
+-- these columns existed
+alter table club_memberships add column if not exists full_name text not null default '';
+alter table club_memberships add column if not exists student_id text not null default '';
+alter table club_memberships add column if not exists program text not null default '';
+
 create index if not exists idx_memberships_user on club_memberships(user_id);
+create index if not exists idx_memberships_club on club_memberships(club_id);
 
 alter table club_memberships enable row level security;
 

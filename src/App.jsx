@@ -80,7 +80,7 @@ export default function App() {
         {tab === 'notes' && <Notes userId={uid} />}
         {tab === 'due' && <Reminders userId={uid} onCount={setPending} />}
         {tab === 'grades' && <Grades userId={uid} />}
-        {tab === 'clubs' && <Clubs userId={uid} email={email} />}
+        {tab === 'clubs' && <Clubs userId={uid} email={email} onNavigate={goTo} />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'campus' && <Campus />}
         {tab === 'profile' && <Profile userId={uid} email={email} />}
