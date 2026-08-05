@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { computeGPA } from '../lib/gpa';
-import { BellIcon, ChartIcon, MegaphoneIcon, AskIcon, CalendarIcon, NotesIcon } from './Icons';
+import { BellIcon, ChartIcon, MegaphoneIcon, BookIcon, IdCardIcon, GlobeIcon, InstagramIcon } from './Icons';
 
+// External systems students actually need quick access to, not internal
+// tabs — those already have their own bottom-nav buttons.
 const QUICK_LINKS = [
-  { tab: 'ask', label: 'Ask', Icon: AskIcon },
-  { tab: 'calendar', label: 'Calendar', Icon: CalendarIcon },
-  { tab: 'notes', label: 'Notes', Icon: NotesIcon },
-  { tab: 'grades', label: 'Grades', Icon: ChartIcon },
+  { href: 'https://moodle.gutech.edu.om/login/index.php', label: 'Moodle', Icon: BookIcon },
+  { href: 'https://eduwave.gutech.edu.om/EduwaveHE/Login.aspx', label: 'EduWave', Icon: IdCardIcon },
+  { href: 'https://www.gutech.edu.om', label: 'Website', Icon: GlobeIcon },
+  { href: 'https://www.instagram.com/gutech_oman?igsh=MTduM3F0dmFybWM5cg==', label: 'Instagram', Icon: InstagramIcon },
 ];
 
 export default function Home({ who, onNavigate }) {
@@ -63,11 +65,11 @@ export default function Home({ who, onNavigate }) {
 
       <div className="annot">Quick links</div>
       <div className="quick-links">
-        {QUICK_LINKS.map(({ tab, label, Icon }) => (
-          <button key={tab} className="quick-link" onClick={() => onNavigate(tab)}>
+        {QUICK_LINKS.map(({ href, label, Icon }) => (
+          <a key={href} className="quick-link" href={href} target="_blank" rel="noopener noreferrer">
             <Icon size={20} />
             <span>{label}</span>
-          </button>
+          </a>
         ))}
       </div>
 

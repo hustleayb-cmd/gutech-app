@@ -41,6 +41,7 @@ export const BookIcon = (p) => <Icon {...p}><path d="M4.5 5.2A1.2 1.2 0 0 1 5.7 
 export const PinIcon = (p) => <Icon {...p}><path d="M12 2.5 15 8l5.5 1-4 4 1 5.5-5.5-3-5.5 3 1-5.5-4-4L8 8Z" /></Icon>;
 export const IdCardIcon = (p) => <Icon {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="11" r="2" /><path d="M6 16c.5-1.5 1.7-2.3 2.5-2.3s2 .8 2.5 2.3M14 9.5h4M14 12.5h4M14 15.5h2.5" /></Icon>;
 export const PhoneIcon = (p) => <Icon {...p}><path d="M6 3.5h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A15.5 15.5 0 0 1 4.5 5.1 1.5 1.5 0 0 1 6 3.5Z" /></Icon>;
+export const InstagramIcon = (p) => <Icon {...p}><rect x="3.5" y="3.5" width="17" height="17" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="16.8" cy="7.2" r="1" fill="currentColor" stroke="none" /></Icon>;
 
 // ---- Club category icons ----
 export const TrophyIcon = (p) => <Icon {...p}><path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z" /><path d="M7 5.5H4v1.5a3 3 0 0 0 3 3M17 5.5h3v1.5a3 3 0 0 1-3 3" /><path d="M12 13.5V17M9 20.5h6M9.5 17h5l.7 3.5h-6.4z" /></Icon>;
