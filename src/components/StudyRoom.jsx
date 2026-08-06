@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PlayIcon, PauseIcon, StopIcon, ResetIcon, SoundIcon, HeartIcon, ChartIcon, CloseIcon } from './Icons';
+import { PlayIcon, PauseIcon, StopIcon, ResetIcon, ChartIcon, CloseIcon, SparkleIcon } from './Icons';
 
 // Phase 1 scope (per the staged build order): the live timer card only —
 // no task list, no chapters, no stats yet. Settings live in local state
@@ -12,7 +12,6 @@ const MODES = {
   long: { label: 'Long Break', defaultMinutes: 15 },
 };
 
-const SOUND_PRESETS = ['Silence', 'Rain', 'Lo-fi', 'White noise'];
 const MIN_MINUTES = 5;
 const MAX_MINUTES = 60;
 
@@ -25,8 +24,6 @@ export default function StudyRoom() {
   const [roundsCompleted, setRoundsCompleted] = useState(0);
   const [editingGoal, setEditingGoal] = useState(false);
   const [suggestion, setSuggestion] = useState(null); // { nextMode } | null
-  const [soundIndex, setSoundIndex] = useState(0);
-  const [favSounds, setFavSounds] = useState(new Set());
   const [statsNotice, setStatsNotice] = useState(false);
 
   const endTimeRef = useRef(null);
@@ -130,6 +127,20 @@ export default function StudyRoom() {
 
   const statusLabel = status === 'running' ? 'Focusing' : status === 'paused' ? 'Paused' : 'Ready';
   const durationFill = ((durations[mode] - MIN_MINUTES) / (MAX_MINUTES - MIN_MINUTES)) * 100;
+
+  // Simple on-device heuristic, not a live model call — see the note
+  // rendered under the card. Suppressed while the break-suggestion
+  // banner above is already showing something to act on, so the two
+  // don't say two different things at once.
+  const aiSuggestion = suggestion
+    ? null
+    : status === 'running'
+    ? { title: 'Stay with it', body: `${MODES[mode].label} in progress — you're doing great.` }
+    : status === 'paused'
+    ? { title: "Whenever you're ready", body: 'Resume to pick up right where you left off.' }
+    : roundsCompleted === 0
+    ? { title: 'Start your first round', body: 'A 25-minute Pomodoro is a solid way to begin.' }
+    : { title: `${roundsCompleted} round${roundsCompleted === 1 ? '' : 's'} today`, body: "Nice pace — start another whenever you're ready." };
 
   return (
     <>
@@ -236,28 +247,17 @@ export default function StudyRoom() {
           <button className="ghost icon-btn" onClick={reset} aria-label="Reset"><ResetIcon size={16} /></button>
         </div>
 
-        <div className="sound-selector">
-          <button
-            className="ghost icon-btn"
-            onClick={() => setSoundIndex(i => (i - 1 + SOUND_PRESETS.length) % SOUND_PRESETS.length)}
-            aria-label="Previous sound"
-          >
-            <SoundIcon size={15} />
-          </button>
-          <span className="sound-name">{SOUND_PRESETS[soundIndex]}</span>
-          <button
-            className={`ghost icon-btn ${favSounds.has(SOUND_PRESETS[soundIndex]) ? 'is-fav' : ''}`}
-            onClick={() => setFavSounds(prev => {
-              const next = new Set(prev);
-              next.has(SOUND_PRESETS[soundIndex]) ? next.delete(SOUND_PRESETS[soundIndex]) : next.add(SOUND_PRESETS[soundIndex]);
-              return next;
-            })}
-            aria-label="Favorite this sound"
-          >
-            <HeartIcon size={15} />
-          </button>
+        <div className="ai-suggest-card">
+          <div className="ai-suggest-header"><SparkleIcon size={13} /> AI Suggests</div>
+          <div className="ai-suggest-body">
+            <span className="ai-suggest-icon"><SparkleIcon size={16} /></span>
+            <div>
+              <h4>{aiSuggestion ? aiSuggestion.title : 'No active suggestions'}</h4>
+              <p>{aiSuggestion ? aiSuggestion.body : 'The break prompt above already covers what to do next.'}</p>
+            </div>
+          </div>
         </div>
-        <p className="study-sound-note">Sound playback isn't wired up yet — presets are just selectable for now.</p>
+        <p className="study-sound-note">Suggestions are simple on-device rules for now, not a live AI call.</p>
       </div>
     </>
   );

@@ -1703,6 +1703,40 @@ nav button[data-on='1'] {
 
 .study-sound-note { margin-top: 10px; font-size: 11px; color: var(--text-dim); text-align: center; }
 
+.ai-suggest-card {
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid rgba(0, 87, 168, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+
+.ai-suggest-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--gu-blue);
+  margin-bottom: 10px;
+}
+
+.ai-suggest-body { display: flex; align-items: flex-start; gap: 12px; }
+
+.ai-suggest-icon {
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  background: var(--gu-blue-tint);
+  color: var(--gu-blue);
+}
+
+.ai-suggest-body h4 { font-size: 14px; font-weight: 700; color: var(--text-main); }
+.ai-suggest-body p { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+
 /* ============ PROJECT ROOMS ============ */
 .room-card { cursor: pointer; }
 
