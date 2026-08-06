@@ -2,11 +2,36 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { nextReviewDate, CONFIDENCE_LEVELS } from '../lib/spacedReview';
 import { maybeNotifyReviewsDue } from '../lib/notifications';
-import { SparkleIcon, BookIcon, PinIcon, ChevronLeft, PlusIcon, ResetIcon, CheckIcon, ChatBubbleIcon } from './Icons';
+import { accentForCourse } from '../lib/courseVisuals';
+import { SubjectIcon, WobbleCheck, FaceLow, FaceMid, FaceHigh, EmptyDoodle } from './CourseIcons';
+import { SparkleIcon, ChevronLeft, PlusIcon, ResetIcon, ChatBubbleIcon } from './Icons';
+
+const FACES = { 1: FaceLow, 3: FaceMid, 5: FaceHigh };
+
+function accentVars(accent) {
+  return { '--cp-accent': accent.solid, '--cp-accent-tint': accent.tint, '--cp-accent-deep': accent.deep };
+}
+
+// Fixed 8-segment tactile track — chunkier and more "filled in" than a
+// thin loading bar, and consistent regardless of how many checklist
+// items a topic actually has.
+function SegmentedTrack({ fraction, showPct = true }) {
+  const filled = Math.round(fraction * 8);
+  return (
+    <div className="cp-segtrack">
+      <div className="cp-segtrack-pips">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className={`cp-seg ${i < filled ? 'is-filled' : ''}`} />
+        ))}
+      </div>
+      {showPct && <span className="cp-segtrack-pct">{Math.round(fraction * 100)}%</span>}
+    </div>
+  );
+}
 
 // Phase 2+3 scope: dashboard, course view (topic list, mastery fill,
-// Up Next), and now topic detail — checklist with confidence ratings
-// (not plain done/not-done — that's the actual retention mechanic),
+// Up Next), and topic detail — checklist with confidence ratings (not
+// plain done/not-done — that's the actual retention mechanic),
 // confidence-driven resurfacing, and the "Explain this" inline chat.
 export default function CoursePlanner({ userId }) {
   const [courses, setCourses] = useState([]);
@@ -73,66 +98,70 @@ export default function CoursePlanner({ userId }) {
   }
 
   return (
-    <>
-      <div className="annot">Course Planner</div>
+    <div className="cp-scope">
+      <div className="cp-header-row">
+        <div>
+          <div className="cp-eyebrow">Course Planner</div>
+          <h2 className="cp-page-title">Your courses</h2>
+          <p className="cp-page-sub">Mapped out, topic by topic.</p>
+        </div>
+      </div>
 
-      {err && <div className="notice err">{err}</div>}
+      {err && <div className="cp-notice err">{err}</div>}
 
       {creating ? (
-        <div className="card">
+        <div className="cp-form-card">
           <label htmlFor="cpn">Course name</label>
           <input id="cpn" value={name} onChange={e => setName(e.target.value)} placeholder="Computer Architecture — Unit 4" />
 
           <label htmlFor="cpl">Google Doc / Slides / Drive link</label>
           <input id="cpl" value={sourceLink} onChange={e => setSourceLink(e.target.value)} placeholder="https://docs.google.com/... or drive.google.com/file/..." />
-          <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: -8, marginBottom: 14 }}>
-            Must be shared as "Anyone with the link can view".
-          </p>
+          <p className="cp-form-hint">Must be shared as "Anyone with the link can view".</p>
 
           {generating ? (
-            <div className="notice" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="cp-generating">
               <SparkleIcon size={15} />
               <span>Reading your material and building a topic breakdown — this can take up to a minute, especially for image-heavy PDFs.</span>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="primary" onClick={createCourseAndGenerate}>
+              <button className="cp-btn-primary" onClick={createCourseAndGenerate}>
                 <SparkleIcon size={15} /> Generate breakdown
               </button>
-              <button className="ghost" onClick={() => { setCreating(false); setErr(''); }}>Cancel</button>
+              <button className="cp-btn-ghost" onClick={() => { setCreating(false); setErr(''); }}>Cancel</button>
             </div>
           )}
         </div>
       ) : (
-        <button className="primary" onClick={() => setCreating(true)}>
+        <button className="cp-btn-primary" onClick={() => setCreating(true)}>
           <PlusIcon size={16} /> Add Course Material
         </button>
       )}
 
       {loaded && courses.length === 0 && !creating && (
-        <div className="empty" style={{ marginTop: 14 }}>
-          <div className="k"><BookIcon size={14} /> No courses yet</div>
+        <div className="cp-empty">
+          <EmptyDoodle />
+          <h4>No courses yet</h4>
           <p>Add a course and paste a shared doc link to get an AI-generated topic breakdown.</p>
         </div>
       )}
 
-      <div style={{ marginTop: 14 }}>
-        {courses.map(c => (
-          <div key={c.id} className="card course-card" onClick={() => setOpenCourseId(c.id)} role="button" tabIndex={0}>
-            <div className="row">
-              <h3 style={{ fontSize: 16 }}>{c.name}</h3>
-              <span className="stamp badge-neutral">{c.topicCount} topic{c.topicCount === 1 ? '' : 's'}</span>
-            </div>
-            <div className="mastery-row">
-              <div className="room-progress-track">
-                <div className="room-progress-fill" style={{ width: `${Math.round(c.mastery * 100)}%` }} />
+      <div className="cp-course-grid">
+        {courses.map(c => {
+          const accent = accentForCourse(c.id);
+          return (
+            <div key={c.id} className="cp-course-card" style={accentVars(accent)} onClick={() => setOpenCourseId(c.id)} role="button" tabIndex={0}>
+              <div className="cp-icon-badge"><SubjectIcon title={c.name} size={20} /></div>
+              <div className="cp-course-card-body">
+                <div className="cp-course-card-title">{c.name}</div>
+                <div className="cp-course-card-meta">{c.topicCount} topic{c.topicCount === 1 ? '' : 's'}</div>
+                <SegmentedTrack fraction={c.mastery} />
               </div>
-              <span className="mastery-pct">{Math.round(c.mastery * 100)}%</span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -186,6 +215,7 @@ function CourseView({ courseId, userId, onBack }) {
     return (
       <TopicDetail
         topicId={openTopicId}
+        courseId={courseId}
         userId={userId}
         onBack={() => { setOpenTopicId(null); load(); }}
       />
@@ -194,68 +224,67 @@ function CourseView({ courseId, userId, onBack }) {
 
   if (!course) {
     return (
-      <>
-        <button className="ghost" onClick={onBack}><ChevronLeft size={14} /> Back</button>
-        {err ? <div className="notice err" style={{ marginTop: 14 }}>{err}</div> : null}
-      </>
+      <div className="cp-scope">
+        <button className="cp-back" onClick={onBack}><ChevronLeft size={14} /> Back</button>
+        {err ? <div className="cp-notice err">{err}</div> : null}
+      </div>
     );
   }
 
-  // Up Next: first topic, in suggested order, that isn't fully rated
-  // high-confidence yet.
+  const accent = accentForCourse(courseId);
   const upNext = topics.find(t => t.mastery < 1) ?? topics[0];
 
   return (
-    <>
-      <button className="ghost" onClick={onBack} style={{ marginBottom: 14 }}>
-        <ChevronLeft size={14} /> All courses
-      </button>
+    <div className="cp-scope">
+      <button className="cp-back" onClick={onBack}><ChevronLeft size={14} /> All courses</button>
 
-      {err && <div className="notice err">{err}</div>}
+      {err && <div className="cp-notice err">{err}</div>}
 
-      <div className="row" style={{ alignItems: 'flex-start' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800 }}>{course.name}</h2>
-        <button className="ghost" onClick={regenerate} disabled={regenerating}>
+      <div className="cp-header-row">
+        <div>
+          <div className="cp-eyebrow">Course</div>
+          <h2 className="cp-page-title">{course.name}</h2>
+        </div>
+        <button className="cp-btn-ghost" onClick={regenerate} disabled={regenerating}>
           <ResetIcon size={13} /> {regenerating ? 'Working…' : 'Regenerate'}
         </button>
       </div>
 
       {upNext && (
-        <div className="card up-next-card" onClick={() => setOpenTopicId(upNext.id)} role="button" tabIndex={0}>
-          <div className="row" style={{ gap: 8, justifyContent: 'flex-start', marginBottom: 6 }}>
-            <PinIcon size={14} className="pin-icon" />
-            <span className="up-next-label">Up next</span>
-          </div>
-          <h3 style={{ fontSize: 15 }}>{upNext.title}</h3>
-          <p style={{ marginTop: 4 }}>{upNext.summary}</p>
+        <div className="cp-hero" style={accentVars(accent)} onClick={() => setOpenTopicId(upNext.id)} role="button" tabIndex={0}>
+          <div className="cp-hero-icon"><SubjectIcon title={upNext.title} size={92} /></div>
+          <div className="cp-hero-eyebrow">✦ Up next</div>
+          <h3 className="cp-hero-title">{upNext.title}</h3>
+          <p className="cp-hero-body">{upNext.summary}</p>
+          <span className="cp-hero-cta">Continue <ChevronLeft size={12} style={{ transform: 'rotate(180deg)' }} /></span>
         </div>
       )}
 
-      <div className="annot">Topics — suggested order</div>
-      {topics.map(t => (
-        <div key={t.id} className="card topic-row" onClick={() => setOpenTopicId(t.id)} role="button" tabIndex={0}>
-          <div className="row" style={{ alignItems: 'flex-start' }}>
-            <h3 style={{ fontSize: 15 }}>{t.title}</h3>
-            <span className="stamp badge-neutral">{t.itemCount} item{t.itemCount === 1 ? '' : 's'}</span>
-          </div>
-          <p>{t.summary}</p>
-          <div className="mastery-row" style={{ marginTop: 10 }}>
-            <div className="room-progress-track">
-              <div className="room-progress-fill" style={{ width: `${Math.round(t.mastery * 100)}%` }} />
+      <div className="cp-eyebrow">Topics — suggested order</div>
+      <div className="cp-topic-list">
+        {topics.map(t => (
+          <div key={t.id} className="cp-topic-card" style={accentVars(accent)} onClick={() => setOpenTopicId(t.id)} role="button" tabIndex={0}>
+            <div className="cp-topic-card-top">
+              <div className="cp-icon-badge"><SubjectIcon title={t.title} size={18} /></div>
+              <div style={{ flex: 1 }}>
+                <div className="cp-topic-card-title">{t.title}</div>
+              </div>
+              <span className="cp-count-chip">{t.itemCount} item{t.itemCount === 1 ? '' : 's'}</span>
             </div>
-            <span className="mastery-pct">{Math.round(t.mastery * 100)}%</span>
+            <p className="cp-topic-card-summary">{t.summary}</p>
+            <SegmentedTrack fraction={t.mastery} />
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
-      <div className="notice" style={{ marginTop: 4 }}>
+      <div className="cp-notice" style={{ marginTop: 14 }}>
         This is a study aid grounded in your actual material, not a substitute for reading it — AI summaries can still miss nuance.
       </div>
-    </>
+    </div>
   );
 }
 
-function TopicDetail({ topicId, userId, onBack }) {
+function TopicDetail({ topicId, courseId, userId, onBack }) {
   const [topic, setTopic] = useState(null);
   const [items, setItems] = useState([]);
   const [openChatItemId, setOpenChatItemId] = useState(null);
@@ -287,63 +316,71 @@ function TopicDetail({ topicId, userId, onBack }) {
     setItems(prev => prev.map(i => (i.id === item.id ? { ...i, confidence_rating: value } : i)));
   }
 
+  const accent = accentForCourse(courseId);
+
   if (!topic) {
     return (
-      <>
-        <button className="ghost" onClick={onBack}><ChevronLeft size={14} /> Back</button>
-        {err ? <div className="notice err" style={{ marginTop: 14 }}>{err}</div> : null}
-      </>
+      <div className="cp-scope">
+        <button className="cp-back" onClick={onBack}><ChevronLeft size={14} /> Back</button>
+        {err ? <div className="cp-notice err">{err}</div> : null}
+      </div>
     );
   }
 
   return (
-    <>
-      <button className="ghost" onClick={onBack} style={{ marginBottom: 14 }}>
-        <ChevronLeft size={14} /> {topic.title}
-      </button>
+    <div className="cp-scope" style={accentVars(accent)}>
+      <button className="cp-back" onClick={onBack}><ChevronLeft size={14} /> {topic.title}</button>
 
-      {err && <div className="notice err">{err}</div>}
+      {err && <div className="cp-notice err">{err}</div>}
 
-      <h2 style={{ fontSize: 19, fontWeight: 800 }}>{topic.title}</h2>
-      <p style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 14 }}>{topic.summary}</p>
+      <div className="cp-eyebrow">Topic</div>
+      <h2 className="cp-page-title" style={{ fontSize: 21 }}>{topic.title}</h2>
+      <p className="cp-page-sub" style={{ marginBottom: 4 }}>{topic.summary}</p>
 
-      <div className="annot">Checklist</div>
-      {items.map(item => (
-        <div key={item.id} className="card checklist-item-card">
-          <p style={{ marginTop: 0, fontSize: 14, color: 'var(--text-main)' }}>{item.title}</p>
+      <div className="cp-eyebrow" style={{ marginTop: 20 }}>Checklist</div>
+      <div className="cp-checklist">
+        {items.map(item => {
+          const Face = FACES[item.confidence_rating];
+          return (
+            <div key={item.id} className="cp-checklist-card">
+              {item.confidence_rating === 5 && <span className="cp-mastered-badge"><WobbleCheck size={16} /></span>}
+              <p className="cp-checklist-item-title">{item.title}</p>
 
-          <div className="row" style={{ marginTop: 12 }}>
-            <div className="confidence-row">
-              <span className="confidence-label">How confident?</span>
-              <div className="confidence-btns">
-                {CONFIDENCE_LEVELS.map(lvl => (
-                  <button
-                    key={lvl.value}
-                    className={`confidence-btn ${item.confidence_rating === lvl.value ? 'is-active' : ''}`}
-                    style={{ opacity: 0.3 + (lvl.value / 5) * 0.7 }}
-                    onClick={() => rate(item, lvl.value)}
-                  >
-                    {item.confidence_rating === lvl.value && <CheckIcon size={11} />} {lvl.label}
-                  </button>
-                ))}
+              <div className="cp-face-block">
+                <div className="cp-face-label">How confident?</div>
+                <div className="cp-face-row">
+                  {CONFIDENCE_LEVELS.map(lvl => {
+                    const LvlFace = FACES[lvl.value];
+                    return (
+                      <button
+                        key={lvl.value}
+                        className={`cp-face-btn ${item.confidence_rating === lvl.value ? 'is-active' : ''}`}
+                        onClick={() => rate(item, lvl.value)}
+                      >
+                        <LvlFace size={22} />
+                        <span>{lvl.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              <button
+                className="cp-btn-ghost"
+                style={{ marginTop: 12 }}
+                onClick={() => setOpenChatItemId(openChatItemId === item.id ? null : item.id)}
+              >
+                <ChatBubbleIcon size={13} /> Explain this
+              </button>
+
+              {openChatItemId === item.id && (
+                <ExplainChat topicId={topicId} itemId={item.id} />
+              )}
             </div>
-          </div>
-
-          <button
-            className="ghost"
-            style={{ marginTop: 10 }}
-            onClick={() => setOpenChatItemId(openChatItemId === item.id ? null : item.id)}
-          >
-            <ChatBubbleIcon size={13} /> Explain this
-          </button>
-
-          {openChatItemId === item.id && (
-            <ExplainChat topicId={topicId} itemId={item.id} />
-          )}
-        </div>
-      ))}
-    </>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -380,25 +417,24 @@ function ExplainChat({ topicId, itemId }) {
   }
 
   return (
-    <div className="explain-chat">
-      {err && <div className="notice err">{err}</div>}
+    <div className="cp-explain">
+      {err && <div className="cp-notice err">{err}</div>}
       {loaded && messages.length === 0 && (
-        <p className="explain-chat-empty">Ask anything about this item — answers stay grounded in your uploaded material.</p>
+        <p className="cp-explain-empty">Ask anything about this item — answers stay grounded in your uploaded material.</p>
       )}
-      <div className="explain-chat-thread">
+      <div className="cp-explain-thread">
         {messages.map(m => (
-          <div key={m.id} className={`explain-bubble ${m.role === 'user' ? 'me' : 'bot'}`}>{m.content}</div>
+          <div key={m.id} className={`cp-bubble ${m.role === 'user' ? 'me' : 'bot'}`}>{m.content}</div>
         ))}
       </div>
-      <div className="explain-chat-input">
+      <div className="cp-explain-input">
         <input
           value={question}
           onChange={e => setQuestion(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && ask()}
           placeholder="Ask a question…"
-          style={{ margin: 0 }}
         />
-        <button className="ghost" onClick={ask} disabled={busy || !question.trim()}>{busy ? '…' : 'Ask'}</button>
+        <button className="cp-btn-ghost" onClick={ask} disabled={busy || !question.trim()}>{busy ? '…' : 'Ask'}</button>
       </div>
     </div>
   );

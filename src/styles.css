@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+/* Course Planner's own pairing — scoped under .cp-scope, doesn't touch
+   the rest of the app's Plus Jakarta Sans / GUtech-blue system. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600;700;800&display=swap');
 
 :root {
   /* GUtech brand blues, pulled from the university wordmark */
@@ -1916,3 +1919,355 @@ nav button[data-on='1'] {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 10px; }
+
+/* ================================================================
+   COURSE PLANNER — its own visual system, scoped under .cp-scope.
+   Warm/editorial rather than the rest of the app's cool GUtech blue,
+   on purpose: this is the "sit down and study" corner of the app, not
+   a records/admin screen, so it earns a distinct, warmer identity
+   instead of inheriting the SaaS-dashboard look everywhere else uses.
+   Per-course accent colors arrive as inline custom properties
+   (--cp-accent / --cp-accent-tint / --cp-accent-deep) from
+   accentForCourse() in src/lib/courseVisuals.js.
+   ================================================================ */
+.cp-scope {
+  --cp-bg:        #FBF5EA;
+  --cp-bg-alt:    #F3E9D6;
+  --cp-surface:   #FFFCF6;
+  --cp-ink:       #2B2118;
+  --cp-ink-soft:  #4A3D2F;
+  --cp-ink-muted: #7C6C56;
+  --cp-ink-dim:   #A8987E;
+  --cp-border:    #E9DCC2;
+  --cp-cream:     #FFFAEF;
+  --cp-shadow:    0 12px 28px -14px rgba(43, 33, 24, 0.35);
+  --cp-shadow-lg: 0 20px 44px -16px rgba(43, 33, 24, 0.4);
+  --cp-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --cp-font-body: 'Karla', var(--font-sans);
+
+  /* Explicit (non-inverting) button pair — --cp-ink itself flips light
+     in dark mode since it's also body text, which would otherwise wash
+     the primary button out to near-invisible contrast against its own label. */
+  --cp-btn-bg:   #2B2118;
+  --cp-btn-text: #FFFAEF;
+
+  font-family: var(--cp-font-body);
+  color: var(--cp-ink);
+  background: var(--cp-bg);
+  margin: -4px -16px 0;
+  padding: 16px 16px 4px;
+  min-height: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  .cp-scope {
+    --cp-bg:        #1D1811;
+    --cp-bg-alt:    #241D14;
+    --cp-surface:   #29221A;
+    --cp-ink:       #F3EADC;
+    --cp-ink-soft:  #DFD1BA;
+    --cp-ink-muted: #AC9C82;
+    --cp-ink-dim:   #7C6C56;
+    --cp-border:    #3A3024;
+    --cp-shadow:    0 14px 30px -14px rgba(0, 0, 0, 0.55);
+    --cp-shadow-lg: 0 22px 46px -16px rgba(0, 0, 0, 0.6);
+    --cp-btn-bg:    #F3EADC;
+    --cp-btn-text:  #241D14;
+  }
+}
+
+.cp-scope h1, .cp-scope h2, .cp-scope h3 { font-family: var(--cp-font-display); color: var(--cp-ink); letter-spacing: -0.01em; }
+
+.cp-eyebrow {
+  font-family: var(--cp-font-body);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--cp-ink-dim);
+  margin-bottom: 4px;
+}
+
+.cp-page-title { font-size: 26px; font-weight: 600; line-height: 1.1; }
+.cp-page-sub { font-family: var(--cp-font-body); font-size: 13px; color: var(--cp-ink-muted); margin-top: 4px; }
+
+.cp-header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+
+/* -------- buttons -------- */
+.cp-btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--cp-font-body);
+  font-size: 14px; font-weight: 700;
+  color: var(--cp-btn-text);
+  background: var(--cp-btn-bg);
+  border: none;
+  border-radius: 14px;
+  padding: 13px 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: var(--cp-shadow);
+  transition: transform 0.15s var(--ease-out);
+}
+.cp-btn-primary:active { transform: scale(0.97); }
+
+.cp-btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--cp-font-body);
+  font-size: 13px; font-weight: 700;
+  color: var(--cp-ink-soft);
+  background: transparent;
+  border: 1.5px solid var(--cp-border);
+  border-radius: 12px;
+  padding: 9px 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.cp-btn-ghost:disabled { opacity: 0.5; cursor: default; }
+
+.cp-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--cp-font-body);
+  font-size: 13px; font-weight: 700;
+  color: var(--cp-ink-muted);
+  background: none; border: none; cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 14px;
+}
+
+/* -------- form card -------- */
+.cp-form-card {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--cp-shadow);
+}
+.cp-form-card label { font-family: var(--cp-font-body); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--cp-ink-dim); display: block; margin-bottom: 6px; }
+.cp-form-card input {
+  width: 100%;
+  font-family: var(--cp-font-body);
+  font-size: 14.5px;
+  color: var(--cp-ink);
+  background: var(--cp-bg-alt);
+  border: 1.5px solid var(--cp-border);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 14px;
+}
+.cp-form-card input:focus { outline: 2px solid var(--cp-ink); outline-offset: 1px; }
+.cp-form-hint { font-family: var(--cp-font-body); font-size: 11.5px; color: var(--cp-ink-dim); margin-top: -8px; margin-bottom: 14px; }
+.cp-generating {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--cp-font-body); font-size: 13px; color: var(--cp-ink-soft);
+  background: var(--cp-bg-alt); border-radius: 12px; padding: 12px 14px;
+}
+
+/* -------- course cards (dashboard) -------- */
+.cp-course-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+
+.cp-course-card {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-left: 7px solid var(--cp-accent, var(--cp-ink));
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  box-shadow: var(--cp-shadow);
+  transition: transform 0.15s var(--ease-out);
+}
+.cp-course-card:active { transform: scale(0.985); }
+
+.cp-icon-badge {
+  flex-shrink: 0;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  background: var(--cp-accent-tint, var(--cp-bg-alt));
+  color: var(--cp-accent-deep, var(--cp-ink));
+}
+
+.cp-course-card-body { flex: 1; min-width: 0; }
+.cp-course-card-title { font-family: var(--cp-font-display); font-size: 16.5px; font-weight: 600; }
+.cp-course-card-meta { font-family: var(--cp-font-body); font-size: 11.5px; font-weight: 700; color: var(--cp-ink-dim); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+
+/* -------- segmented progress (the "chapters filled in" track) -------- */
+.cp-segtrack { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.cp-segtrack-pips { display: flex; gap: 3px; flex: 1; }
+.cp-seg {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--cp-bg-alt);
+  border: 1px solid var(--cp-border);
+}
+.cp-seg.is-filled {
+  background: var(--cp-accent, var(--cp-ink));
+  border-color: var(--cp-accent, var(--cp-ink));
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.12);
+}
+.cp-segtrack-pct {
+  font-family: var(--cp-font-body);
+  font-size: 12px; font-weight: 800;
+  color: var(--cp-accent-deep, var(--cp-ink-soft));
+  min-width: 30px; text-align: right;
+}
+.cp-course-card .cp-segtrack { margin-top: 0; }
+
+/* small inline variant used inside course cards next to the badge */
+.cp-course-card-body .cp-segtrack { margin-top: 6px; }
+
+/* -------- Up Next hero -------- */
+.cp-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 22px 20px 20px;
+  margin-bottom: 22px;
+  cursor: pointer;
+  color: var(--cp-cream);
+  background: var(--cp-accent, var(--cp-ink));
+  box-shadow: var(--cp-shadow-lg);
+  background-image: radial-gradient(rgba(255,255,255,0.16) 1.4px, transparent 1.4px);
+  background-size: 15px 15px;
+}
+.cp-hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(255,255,255,0.10), transparent 55%);
+  pointer-events: none;
+}
+.cp-hero-icon {
+  position: absolute;
+  top: -14px; right: -10px;
+  opacity: 0.16;
+  transform: rotate(8deg);
+}
+.cp-hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--cp-font-body);
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .14em;
+  color: var(--cp-cream);
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+.cp-hero-title { font-family: var(--cp-font-display); font-size: 21px; font-weight: 600; line-height: 1.2; position: relative; }
+.cp-hero-body { font-family: var(--cp-font-body); font-size: 13.5px; opacity: 0.92; margin-top: 6px; line-height: 1.5; position: relative; max-width: 92%; }
+.cp-hero-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 14px;
+  font-family: var(--cp-font-body); font-size: 12.5px; font-weight: 800;
+  background: var(--cp-cream); color: var(--cp-ink);
+  border-radius: 100px; padding: 9px 16px;
+  position: relative;
+}
+
+/* -------- topic list -------- */
+.cp-topic-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.cp-topic-card {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  padding: 14px 15px;
+  cursor: pointer;
+  box-shadow: var(--cp-shadow);
+}
+.cp-topic-card-top { display: flex; align-items: flex-start; gap: 12px; }
+.cp-topic-card-title { font-family: var(--cp-font-display); font-size: 15.5px; font-weight: 600; flex: 1; }
+.cp-topic-card-summary { font-family: var(--cp-font-body); font-size: 12.5px; color: var(--cp-ink-muted); line-height: 1.5; margin-top: 6px; }
+.cp-count-chip {
+  flex-shrink: 0;
+  font-family: var(--cp-font-body);
+  font-size: 11px; font-weight: 800;
+  color: var(--cp-accent-deep, var(--cp-ink-soft));
+  background: var(--cp-accent-tint, var(--cp-bg-alt));
+  border-radius: 100px;
+  padding: 4px 10px;
+}
+
+/* -------- checklist / confidence faces -------- */
+.cp-checklist { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.cp-checklist-card {
+  position: relative;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  padding: 15px 16px;
+  box-shadow: var(--cp-shadow);
+}
+.cp-checklist-item-title { font-family: var(--cp-font-body); font-size: 14px; color: var(--cp-ink-soft); line-height: 1.5; }
+.cp-mastered-badge {
+  position: absolute; top: 12px; right: 14px;
+  color: var(--cp-accent-deep, var(--cp-ink));
+}
+
+.cp-face-block { margin-top: 14px; }
+.cp-face-label { font-family: var(--cp-font-body); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--cp-ink-dim); margin-bottom: 9px; }
+.cp-face-row { display: flex; gap: 10px; }
+.cp-face-btn {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: var(--cp-bg-alt);
+  border: 1.5px solid var(--cp-border);
+  border-radius: 14px;
+  padding: 10px 6px 8px;
+  color: var(--cp-ink-dim);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.18s var(--ease-spring), background 0.18s, color 0.18s, border-color 0.18s;
+}
+.cp-face-btn span { font-family: var(--cp-font-body); font-size: 10px; font-weight: 700; }
+.cp-face-btn.is-active {
+  background: var(--cp-accent-tint, var(--cp-bg-alt));
+  border-color: var(--cp-accent, var(--cp-border));
+  color: var(--cp-accent-deep, var(--cp-ink));
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* -------- explain chat -------- */
+.cp-explain { margin-top: 13px; padding-top: 13px; border-top: 1px dashed var(--cp-border); }
+.cp-explain-empty { font-family: var(--cp-font-body); font-size: 12px; color: var(--cp-ink-dim); margin-bottom: 10px; }
+.cp-explain-thread { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.cp-bubble {
+  max-width: 88%;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-family: var(--cp-font-body);
+  font-size: 12.5px; line-height: 1.5;
+  white-space: pre-wrap;
+}
+.cp-bubble.me { align-self: flex-end; background: var(--cp-btn-bg); color: var(--cp-btn-text); border-bottom-right-radius: 3px; }
+.cp-bubble.bot { align-self: flex-start; background: var(--cp-bg-alt); color: var(--cp-ink); border: 1px solid var(--cp-border); border-bottom-left-radius: 3px; }
+.cp-explain-input { display: flex; gap: 8px; }
+.cp-explain-input input {
+  flex: 1; margin: 0;
+  font-family: var(--cp-font-body); font-size: 13.5px;
+  background: var(--cp-bg-alt); border: 1.5px solid var(--cp-border); border-radius: 12px;
+  padding: 9px 12px; color: var(--cp-ink);
+}
+
+/* -------- empty state / notices -------- */
+.cp-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+  background: var(--cp-surface);
+  border: 1.5px dashed var(--cp-border);
+  border-radius: 18px;
+  padding: 32px 20px;
+  margin-top: 14px;
+  color: var(--cp-ink-dim);
+}
+.cp-empty h4 { font-family: var(--cp-font-display); font-size: 16px; font-weight: 600; color: var(--cp-ink-soft); }
+.cp-empty p { font-family: var(--cp-font-body); font-size: 12.5px; color: var(--cp-ink-muted); max-width: 30ch; }
+
+.cp-notice {
+  font-family: var(--cp-font-body);
+  font-size: 12.5px;
+  color: var(--cp-ink-muted);
+  background: var(--cp-bg-alt);
+  border: 1px solid var(--cp-border);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.cp-notice.err { color: #8C3A20; background: #F5E1D6; border-color: #E8C4AE; }
