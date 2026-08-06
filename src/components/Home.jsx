@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { computeGPA } from '../lib/gpa';
-import { BellIcon, ChartIcon, MegaphoneIcon, BookIcon, IdCardIcon, GlobeIcon, InstagramIcon } from './Icons';
+import { BellIcon, ChartIcon, MegaphoneIcon, BookIcon, IdCardIcon, GlobeIcon, InstagramIcon, StreakIcon } from './Icons';
 
 // External systems students actually need quick access to, not internal
 // tabs — those already have their own bottom-nav buttons.
@@ -12,7 +12,7 @@ const QUICK_LINKS = [
   { href: 'https://www.instagram.com/gutech_oman?igsh=MTduM3F0dmFybWM5cg==', label: 'Instagram', Icon: InstagramIcon },
 ];
 
-export default function Home({ who, onNavigate }) {
+export default function Home({ who, onNavigate, streak }) {
   const [due, setDue] = useState([]);
   const [announcement, setAnnouncement] = useState(null);
   const [gpa, setGpa] = useState(null);
@@ -60,6 +60,11 @@ export default function Home({ who, onNavigate }) {
           <div className="home-stat-icon"><ChartIcon size={18} /></div>
           <span className="home-stat-num">{gpa && gpa.hours > 0 ? gpa.gpa.toFixed(2) : '—'}</span>
           <span className="home-stat-label">GPA</span>
+        </div>
+        <div className="card home-stat-card">
+          <div className="home-stat-icon"><StreakIcon size={18} /></div>
+          <span className="home-stat-num">{streak ?? '—'}</span>
+          <span className="home-stat-label">Day streak</span>
         </div>
       </div>
 

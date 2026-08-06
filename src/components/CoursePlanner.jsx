@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { SparkleIcon, BookIcon, PinIcon, ChevronLeft, PlusIcon, ResetIcon } from './Icons';
+import { nextReviewDate, CONFIDENCE_LEVELS } from '../lib/spacedReview';
+import { SparkleIcon, BookIcon, PinIcon, ChevronLeft, PlusIcon, ResetIcon, CheckIcon, ChatBubbleIcon } from './Icons';
 
-// Phase 2 scope (staged build order): dashboard + course view (topic
-// list, mastery fill, Up Next) on top of real generated data. Topic
-// detail — the checklist, confidence ratings, and the spaced-repetition
-// resurfacing logic that mastery is *supposed* to reflect — is phase 3,
-// not built yet. Mastery below is computed from confidence_rating
-// averages, but since nothing sets confidence_rating yet, every topic
-// currently shows as unrated (empty fill) — that's expected, not a bug.
+// Phase 2+3 scope: dashboard, course view (topic list, mastery fill,
+// Up Next), and now topic detail — checklist with confidence ratings
+// (not plain done/not-done — that's the actual retention mechanic),
+// confidence-driven resurfacing, and the "Explain this" inline chat.
 export default function CoursePlanner({ userId }) {
   const [courses, setCourses] = useState([]);
   const [openCourseId, setOpenCourseId] = useState(null);
@@ -70,7 +68,7 @@ export default function CoursePlanner({ userId }) {
   }
 
   if (openCourseId) {
-    return <CourseView courseId={openCourseId} onBack={() => { setOpenCourseId(null); loadCourses(); }} />;
+    return <CourseView courseId={openCourseId} userId={userId} onBack={() => { setOpenCourseId(null); loadCourses(); }} />;
   }
 
   return (
@@ -137,9 +135,10 @@ export default function CoursePlanner({ userId }) {
   );
 }
 
-function CourseView({ courseId, onBack }) {
+function CourseView({ courseId, userId, onBack }) {
   const [course, setCourse] = useState(null);
   const [topics, setTopics] = useState([]);
+  const [openTopicId, setOpenTopicId] = useState(null);
   const [regenerating, setRegenerating] = useState(false);
   const [err, setErr] = useState('');
 
@@ -182,6 +181,16 @@ function CourseView({ courseId, onBack }) {
     await load();
   }
 
+  if (openTopicId) {
+    return (
+      <TopicDetail
+        topicId={openTopicId}
+        userId={userId}
+        onBack={() => { setOpenTopicId(null); load(); }}
+      />
+    );
+  }
+
   if (!course) {
     return (
       <>
@@ -192,9 +201,7 @@ function CourseView({ courseId, onBack }) {
   }
 
   // Up Next: first topic, in suggested order, that isn't fully rated
-  // high-confidence yet. Real spaced-repetition prioritization needs
-  // confidence ratings to exist first (phase 3) — for now this just
-  // reflects suggested study order, which is still useful on its own.
+  // high-confidence yet.
   const upNext = topics.find(t => t.mastery < 1) ?? topics[0];
 
   return (
@@ -213,7 +220,7 @@ function CourseView({ courseId, onBack }) {
       </div>
 
       {upNext && (
-        <div className="card up-next-card" onClick={() => document.getElementById(`topic-${upNext.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} role="button" tabIndex={0}>
+        <div className="card up-next-card" onClick={() => setOpenTopicId(upNext.id)} role="button" tabIndex={0}>
           <div className="row" style={{ gap: 8, justifyContent: 'flex-start', marginBottom: 6 }}>
             <PinIcon size={14} className="pin-icon" />
             <span className="up-next-label">Up next</span>
@@ -225,7 +232,7 @@ function CourseView({ courseId, onBack }) {
 
       <div className="annot">Topics — suggested order</div>
       {topics.map(t => (
-        <div key={t.id} id={`topic-${t.id}`} className="card topic-row">
+        <div key={t.id} className="card topic-row" onClick={() => setOpenTopicId(t.id)} role="button" tabIndex={0}>
           <div className="row" style={{ alignItems: 'flex-start' }}>
             <h3 style={{ fontSize: 15 }}>{t.title}</h3>
             <span className="stamp badge-neutral">{t.itemCount} item{t.itemCount === 1 ? '' : 's'}</span>
@@ -241,10 +248,158 @@ function CourseView({ courseId, onBack }) {
       ))}
 
       <div className="notice" style={{ marginTop: 4 }}>
-        Tap a topic's checklist, confidence ratings, and the "Explain this" chat are coming in the next update —
-        this is a study aid grounded in your actual material, not a substitute for reading it. AI summaries can still miss nuance.
+        This is a study aid grounded in your actual material, not a substitute for reading it — AI summaries can still miss nuance.
       </div>
     </>
+  );
+}
+
+function TopicDetail({ topicId, userId, onBack }) {
+  const [topic, setTopic] = useState(null);
+  const [items, setItems] = useState([]);
+  const [openChatItemId, setOpenChatItemId] = useState(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => { load(); }, [topicId]);
+
+  async function load() {
+    const [{ data: topicRow, error: tErr }, { data: itemRows, error: iErr }] = await Promise.all([
+      supabase.from('course_topics').select('*').eq('id', topicId).maybeSingle(),
+      supabase.from('course_checklist_items').select('*').eq('topic_id', topicId).order('position'),
+    ]);
+    if (tErr) { setErr(tErr.message); return; }
+    if (iErr) { setErr(iErr.message); return; }
+    setTopic(topicRow);
+    setItems(itemRows ?? []);
+  }
+
+  // The actual retention mechanic: rating confidence (not a plain
+  // checkbox) sets when this item gets resurfaced next — lower
+  // confidence brings it back sooner.
+  async function rate(item, value) {
+    const { error } = await supabase.from('course_checklist_items').update({
+      confidence_rating: value,
+      last_reviewed_at: new Date().toISOString(),
+      next_review_due: nextReviewDate(value),
+    }).eq('id', item.id);
+    if (error) { setErr(error.message); return; }
+    setItems(prev => prev.map(i => (i.id === item.id ? { ...i, confidence_rating: value } : i)));
+  }
+
+  if (!topic) {
+    return (
+      <>
+        <button className="ghost" onClick={onBack}><ChevronLeft size={14} /> Back</button>
+        {err ? <div className="notice err" style={{ marginTop: 14 }}>{err}</div> : null}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button className="ghost" onClick={onBack} style={{ marginBottom: 14 }}>
+        <ChevronLeft size={14} /> {topic.title}
+      </button>
+
+      {err && <div className="notice err">{err}</div>}
+
+      <h2 style={{ fontSize: 19, fontWeight: 800 }}>{topic.title}</h2>
+      <p style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 14 }}>{topic.summary}</p>
+
+      <div className="annot">Checklist</div>
+      {items.map(item => (
+        <div key={item.id} className="card checklist-item-card">
+          <p style={{ marginTop: 0, fontSize: 14, color: 'var(--text-main)' }}>{item.title}</p>
+
+          <div className="row" style={{ marginTop: 12 }}>
+            <div className="confidence-row">
+              <span className="confidence-label">How confident?</span>
+              <div className="confidence-btns">
+                {CONFIDENCE_LEVELS.map(lvl => (
+                  <button
+                    key={lvl.value}
+                    className={`confidence-btn ${item.confidence_rating === lvl.value ? 'is-active' : ''}`}
+                    style={{ opacity: 0.3 + (lvl.value / 5) * 0.7 }}
+                    onClick={() => rate(item, lvl.value)}
+                  >
+                    {item.confidence_rating === lvl.value && <CheckIcon size={11} />} {lvl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button
+            className="ghost"
+            style={{ marginTop: 10 }}
+            onClick={() => setOpenChatItemId(openChatItemId === item.id ? null : item.id)}
+          >
+            <ChatBubbleIcon size={13} /> Explain this
+          </button>
+
+          {openChatItemId === item.id && (
+            <ExplainChat topicId={topicId} itemId={item.id} />
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function ExplainChat({ topicId, itemId }) {
+  const [messages, setMessages] = useState([]);
+  const [question, setQuestion] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    supabase.from('course_chat_messages').select('*').eq('topic_id', topicId).eq('checklist_item_id', itemId)
+      .order('created_at').then(({ data, error }) => {
+        if (error) setErr(error.message);
+        setMessages(data ?? []);
+        setLoaded(true);
+      });
+  }, [topicId, itemId]);
+
+  async function ask() {
+    const q = question.trim();
+    if (!q || busy) return;
+    setBusy(true); setErr('');
+    setMessages(prev => [...prev, { role: 'user', content: q, id: `local-${Date.now()}` }]);
+    setQuestion('');
+
+    const { data, error } = await supabase.functions.invoke('course-planner', {
+      body: { action: 'explain', topicId, itemId, question: q },
+    });
+    setBusy(false);
+
+    if (error || data?.error) { setErr(data?.error || error.message); return; }
+    setMessages(prev => [...prev, { role: 'assistant', content: data.answer, id: `local-a-${Date.now()}` }]);
+  }
+
+  return (
+    <div className="explain-chat">
+      {err && <div className="notice err">{err}</div>}
+      {loaded && messages.length === 0 && (
+        <p className="explain-chat-empty">Ask anything about this item — answers stay grounded in your uploaded material.</p>
+      )}
+      <div className="explain-chat-thread">
+        {messages.map(m => (
+          <div key={m.id} className={`explain-bubble ${m.role === 'user' ? 'me' : 'bot'}`}>{m.content}</div>
+        ))}
+      </div>
+      <div className="explain-chat-input">
+        <input
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && ask()}
+          placeholder="Ask a question…"
+          style={{ margin: 0 }}
+        />
+        <button className="ghost" onClick={ask} disabled={busy || !question.trim()}>{busy ? '…' : 'Ask'}</button>
+      </div>
+    </div>
   );
 }
 

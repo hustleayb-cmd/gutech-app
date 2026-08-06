@@ -569,6 +569,43 @@ create policy "own chat insert" on course_chat_messages for insert
   with check (exists (select 1 from course_topics t join courses c on c.id = t.course_id where t.id = topic_id and c.user_id = auth.uid()));
 
 -- ============================================================
+-- STREAKS & NOTIFICATION PREFS — cross-cutting, app-wide (not
+-- specific to Course Planner). "Never miss twice" model: missing
+-- one day doesn't break the streak, missing two in a row does. The
+-- actual day-gap math lives in the client (src/lib/streak.js) —
+-- this table just holds the current state.
+-- ============================================================
+
+create table if not exists user_streaks (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  current_streak int not null default 0,
+  last_active_date date,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists notification_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  review_reminders boolean not null default true
+);
+
+alter table user_streaks enable row level security;
+alter table notification_preferences enable row level security;
+
+drop policy if exists "own streak select" on user_streaks;
+create policy "own streak select" on user_streaks for select using (auth.uid() = user_id);
+drop policy if exists "own streak upsert" on user_streaks;
+create policy "own streak upsert" on user_streaks for insert with check (auth.uid() = user_id);
+drop policy if exists "own streak update" on user_streaks;
+create policy "own streak update" on user_streaks for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "own notif prefs select" on notification_preferences;
+create policy "own notif prefs select" on notification_preferences for select using (auth.uid() = user_id);
+drop policy if exists "own notif prefs upsert" on notification_preferences;
+create policy "own notif prefs upsert" on notification_preferences for insert with check (auth.uid() = user_id);
+drop policy if exists "own notif prefs update" on notification_preferences;
+create policy "own notif prefs update" on notification_preferences for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
 -- VERIFY: after running, this should return 4 rows per table
 -- for notes, reminders, grades and club_memberships; 3 rows for
 -- profiles; 1 row each for announcements and clubs

@@ -16,6 +16,7 @@ import Campus from './components/Campus';
 import Profile from './components/Profile';
 import More from './components/More';
 import Logo from './components/Logo';
+import { checkInStreak } from './lib/streak';
 import { HomeIcon, AskIcon, CalendarIcon, NotesIcon, MoreIcon } from './components/Icons';
 
 // Only these five live in the bottom bar (Nielsen/Apple guidance caps it at
@@ -35,6 +36,7 @@ export default function App() {
   const [tab, setTab] = useState('home');
   const [pending, setPending] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [streak, setStreak] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -51,6 +53,13 @@ export default function App() {
     if (!session) return;
     supabase.from('reminders').select('id', { count: 'exact', head: true }).eq('done', false)
       .then(({ count }) => { if (typeof count === 'number') setPending(count); });
+  }, [session]);
+
+  // One check-in per session load — "opened the app today" is the
+  // streak's activity signal, app-wide, not tied to any one feature.
+  useEffect(() => {
+    if (!session) return;
+    checkInStreak(session.user.id).then(({ current_streak }) => setStreak(current_streak));
   }, [session]);
 
   if (!ready) return <div className="app" />;
@@ -77,7 +86,7 @@ export default function App() {
       </header>
 
       <main>
-        {tab === 'home' && <Home who={who} onNavigate={goTo} />}
+        {tab === 'home' && <Home who={who} onNavigate={goTo} streak={streak} />}
         {tab === 'ask' && <Chat userId={uid} />}
         {tab === 'calendar' && <Calendar userId={uid} />}
         {tab === 'notes' && <Notes userId={uid} />}
