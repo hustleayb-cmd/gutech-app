@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { PlayIcon, PauseIcon, StopIcon, ResetIcon, ChartIcon, CloseIcon, SparkleIcon } from './Icons';
+import CoursePlanner from './CoursePlanner';
+import { PlayIcon, PauseIcon, StopIcon, ResetIcon, ChartIcon, CloseIcon, SparkleIcon, TimerIcon, SparkleIcon as PlannerIcon } from './Icons';
 
 // Phase 1 scope (per the staged build order): the live timer card only —
 // no task list, no chapters, no stats yet. Settings live in local state
 // for now; they'll move to a Supabase-backed `study_settings` row once
 // the task list (phase 2) gives them something to actually attach to.
+//
+// Course Planner lives here as a section, not a separate top-level tab —
+// both are "get down to studying" surfaces, so they share a home instead
+// of splintering across the nav.
 
 const MODES = {
   pomodoro: { label: 'Pomodoro', defaultMinutes: 25 },
@@ -15,7 +20,8 @@ const MODES = {
 const MIN_MINUTES = 5;
 const MAX_MINUTES = 60;
 
-export default function StudyRoom() {
+export default function StudyRoom({ userId }) {
+  const [section, setSection] = useState('timer'); // 'timer' | 'courses'
   const [durations, setDurations] = useState({ pomodoro: 25, short: 5, long: 15 });
   const [mode, setMode] = useState('pomodoro');
   const [status, setStatus] = useState('idle'); // idle | running | paused
@@ -142,6 +148,36 @@ export default function StudyRoom() {
     ? { title: 'Start your first round', body: 'A 25-minute Pomodoro is a solid way to begin.' }
     : { title: `${roundsCompleted} round${roundsCompleted === 1 ? '' : 's'} today`, body: "Nice pace — start another whenever you're ready." };
 
+  return (
+    <>
+      <div className="chip-row study-segmented" style={{ marginBottom: 14 }}>
+        <button className={`chip ${section === 'timer' ? 'chip-on' : ''}`} onClick={() => setSection('timer')}>
+          <TimerIcon size={13} /> Focus Timer
+        </button>
+        <button className={`chip ${section === 'courses' ? 'chip-on' : ''}`} onClick={() => setSection('courses')}>
+          <PlannerIcon size={13} /> Course Planner
+        </button>
+      </div>
+
+      {section === 'courses' ? <CoursePlanner userId={userId} /> : <TimerSection
+        statsNotice={statsNotice} setStatsNotice={setStatsNotice}
+        suggestion={suggestion} acceptSuggestion={acceptSuggestion} setSuggestion={setSuggestion}
+        status={status} statusLabel={statusLabel} roundsCompleted={roundsCompleted} roundGoal={roundGoal}
+        radius={radius} circumference={circumference} progress={progress} mm={mm} ss={ss} mode={mode} MODES={MODES}
+        durations={durations} durationFill={durationFill} adjustDuration={adjustDuration}
+        editingGoal={editingGoal} setEditingGoal={setEditingGoal} setRoundGoal={setRoundGoal}
+        switchMode={switchMode} stop={stop} pause={pause} resume={resume} start={start} reset={reset}
+        aiSuggestion={aiSuggestion}
+      />}
+    </>
+  );
+}
+
+function TimerSection({
+  statsNotice, setStatsNotice, suggestion, acceptSuggestion, setSuggestion, status, statusLabel,
+  roundsCompleted, roundGoal, radius, circumference, progress, mm, ss, mode, MODES, durations, durationFill,
+  adjustDuration, editingGoal, setEditingGoal, setRoundGoal, switchMode, stop, pause, resume, start, reset, aiSuggestion,
+}) {
   return (
     <>
       <div className="row" style={{ marginBottom: 4 }}>

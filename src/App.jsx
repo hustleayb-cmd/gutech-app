@@ -9,7 +9,6 @@ import Home from './components/Home';
 import Grades from './components/Grades';
 import StudyRoom from './components/StudyRoom';
 import Projects from './components/Projects';
-import CoursePlanner from './components/CoursePlanner';
 import Clubs from './components/Clubs';
 import Announcements from './components/Announcements';
 import Campus from './components/Campus';
@@ -28,7 +27,7 @@ const PRIMARY_TABS = [
   { tab: 'calendar', label: 'Calendar', Icon: CalendarIcon },
   { tab: 'notes', label: 'Notes', Icon: NotesIcon },
 ];
-const SECONDARY_TABS = new Set(['study', 'projects', 'courses', 'due', 'grades', 'clubs', 'announcements', 'campus', 'profile']);
+const SECONDARY_TABS = new Set(['study', 'projects', 'due', 'grades', 'clubs', 'announcements', 'campus', 'profile']);
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -92,9 +91,8 @@ export default function App() {
         {tab === 'notes' && <Notes userId={uid} />}
         {tab === 'due' && <Reminders userId={uid} onCount={setPending} />}
         {tab === 'grades' && <Grades userId={uid} />}
-        {tab === 'study' && <StudyRoom />}
+        {tab === 'study' && <StudyRoom userId={uid} />}
         {tab === 'projects' && <Projects userId={uid} email={email} />}
-        {tab === 'courses' && <CoursePlanner userId={uid} />}
         {tab === 'clubs' && <Clubs userId={uid} email={email} onNavigate={goTo} />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'campus' && <Campus />}
