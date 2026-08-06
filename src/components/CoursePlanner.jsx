@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { nextReviewDate, CONFIDENCE_LEVELS } from '../lib/spacedReview';
+import { maybeNotifyReviewsDue } from '../lib/notifications';
 import { SparkleIcon, BookIcon, PinIcon, ChevronLeft, PlusIcon, ResetIcon, CheckIcon, ChatBubbleIcon } from './Icons';
 
 // Phase 2+3 scope: dashboard, course view (topic list, mastery fill,
@@ -17,7 +18,7 @@ export default function CoursePlanner({ userId }) {
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => { loadCourses(); }, []);
+  useEffect(() => { loadCourses(); maybeNotifyReviewsDue(userId); }, []);
 
   async function loadCourses() {
     const { data: courseRows, error: cErr } = await supabase

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { UserIcon, IdCardIcon, SignOutIcon } from './Icons';
+import { UserIcon, IdCardIcon, SignOutIcon, BellIcon } from './Icons';
 
 export default function Profile({ userId, email }) {
   const [fullName, setFullName] = useState('');
@@ -11,11 +11,15 @@ export default function Profile({ userId, email }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [reviewReminders, setReviewReminders] = useState(true);
 
   useEffect(() => { load(); }, []);
 
   async function load() {
-    const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
+    const [{ data, error }, { data: prefs }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('notification_preferences').select('review_reminders').eq('user_id', userId).maybeSingle(),
+    ]);
     if (error) { setErr(error.message); setLoaded(true); return; }
     if (data) {
       setFullName(data.full_name ?? '');
@@ -25,7 +29,15 @@ export default function Profile({ userId, email }) {
     } else {
       setEditing(true); // no profile yet — go straight to the form
     }
+    if (prefs) setReviewReminders(prefs.review_reminders);
     setLoaded(true);
+  }
+
+  async function toggleReviewReminders() {
+    const next = !reviewReminders;
+    setReviewReminders(next); // optimistic — flip back below if the write fails
+    const { error } = await supabase.from('notification_preferences').upsert({ user_id: userId, review_reminders: next });
+    if (error) { setErr(error.message); setReviewReminders(!next); }
   }
 
   async function save() {
@@ -98,6 +110,29 @@ export default function Profile({ userId, email }) {
           <UserIcon size={15} /> Edit profile
         </button>
       )}
+
+      <div className="annot">Notifications</div>
+      <div className="card notif-pref-row">
+        <div className="row" style={{ gap: 10, justifyContent: 'flex-start' }}>
+          <BellIcon size={16} />
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-main)' }}>Review reminders</p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+              A single notification when Course Planner items are ready for review — never more than once a day.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className={`toggle-switch ${reviewReminders ? 'is-on' : ''}`}
+          onClick={toggleReviewReminders}
+          role="switch"
+          aria-checked={reviewReminders}
+          aria-label="Review reminders"
+        >
+          <span className="toggle-knob" />
+        </button>
+      </div>
 
       <button className="ghost" style={{ marginTop: 12, color: 'var(--accent-alert)' }} onClick={() => supabase.auth.signOut()}>
         <SignOutIcon size={15} /> Sign out

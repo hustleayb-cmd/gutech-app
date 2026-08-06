@@ -1885,6 +1885,34 @@ nav button[data-on='1'] {
 .explain-chat-input { display: flex; gap: 8px; }
 .explain-chat-input input { margin: 0; flex: 1; }
 
+/* ============ NOTIFICATION PREFS / TOGGLE SWITCH ============ */
+.notif-pref-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+
+.toggle-switch {
+  flex-shrink: 0;
+  width: 44px; height: 26px;
+  padding: 3px;
+  background: var(--border-hi);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.2s var(--ease-out);
+}
+
+.toggle-switch.is-on { background: var(--gu-blue); }
+
+.toggle-knob {
+  display: block;
+  width: 20px; height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s var(--ease-spring);
+}
+
+.toggle-switch.is-on .toggle-knob { transform: translateX(18px); }
+
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 10px; }
