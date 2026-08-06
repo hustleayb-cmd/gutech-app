@@ -176,7 +176,10 @@ async function fetchGoogleDocContent(link: string): Promise<string> {
     // an uploaded file could be a native Doc/Slides shortcut, a PDF, a
     // Word doc, or something we don't support at all.
     const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=mimeType,name&key=${GOOGLE_API_KEY}`);
-    if (!metaRes.ok) throw new Error(`Google Drive API error (${metaRes.status}) — check the file is shared as "Anyone with the link" and the Drive API is enabled on your Google Cloud project.`);
+    if (!metaRes.ok) {
+      const detail = await metaRes.text().catch(() => '');
+      throw new Error(`Google Drive API error (${metaRes.status}): ${detail}`);
+    }
     const meta = await metaRes.json();
     const mime = meta.mimeType as string;
 
