@@ -606,6 +606,43 @@ drop policy if exists "own notif prefs update" on notification_preferences;
 create policy "own notif prefs update" on notification_preferences for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ============================================================
+-- STUDY SESSIONS — ties the Study Room timer to real Course Planner
+-- work instead of it running as a standalone stopwatch. topic_id /
+-- checklist_item_id are nullable: a session can still run untethered
+-- (e.g. a break, or a student who skips picking a topic), but when set
+-- they're what let a session end by writing a confidence rating back
+-- onto the checklist item it was actually about.
+-- ============================================================
+
+create table if not exists study_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  topic_id uuid references course_topics(id) on delete set null,
+  checklist_item_id uuid references course_checklist_items(id) on delete set null,
+  mode text not null default 'pomodoro',
+  planned_minutes int not null,
+  actual_seconds int not null default 0,
+  completed boolean not null default false,
+  finished_task boolean,
+  confidence_after int,
+  distraction_count int not null default 0,
+  distraction_seconds int not null default 0,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists study_sessions_user_created_idx on study_sessions (user_id, created_at desc);
+
+alter table study_sessions enable row level security;
+
+drop policy if exists "own sessions select" on study_sessions;
+create policy "own sessions select" on study_sessions for select using (auth.uid() = user_id);
+drop policy if exists "own sessions insert" on study_sessions;
+create policy "own sessions insert" on study_sessions for insert with check (auth.uid() = user_id);
+drop policy if exists "own sessions update" on study_sessions;
+create policy "own sessions update" on study_sessions for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
 -- VERIFY: after running, this should return 4 rows per table
 -- for notes, reminders, grades and club_memberships; 3 rows for
 -- profiles; 1 row each for announcements and clubs

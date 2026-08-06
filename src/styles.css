@@ -1587,7 +1587,11 @@ nav button[data-on='1'] {
 }
 
 .timer-ring-wrap { position: relative; width: 220px; height: 220px; margin: 6px 0 20px; }
-.timer-ring { width: 100%; height: 100%; }
+/* Both the session ring and the daily-goal outer ring stack exactly on
+   top of each other — without this, two same-size SVGs default to
+   inline flow and just sit stacked below one another instead of
+   overlapping. */
+.timer-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
 .timer-ring-track { fill: none; stroke: rgba(0, 87, 168, 0.12); stroke-width: 10; }
 .timer-ring-fill {
   fill: none;
@@ -1956,6 +1960,12 @@ nav button[data-on='1'] {
   min-height: 100%;
 }
 
+/* Used when reusing cp-scope's styled components (e.g. the confidence
+   face selector) inside a context that already has its own background
+   and padding — a bottom sheet, say — so the scope only supplies its
+   custom properties and fonts, not another full-bleed page background. */
+.cp-scope.cp-scope--inline { margin: 0; padding: 0; background: none; min-height: 0; }
+
 .cp-scope h1, .cp-scope h2, .cp-scope h3 { font-family: var(--cp-font-display); color: var(--cp-ink); letter-spacing: -0.01em; }
 
 .cp-eyebrow {
@@ -2262,3 +2272,129 @@ nav button[data-on='1'] {
   line-height: 1.5;
 }
 .cp-notice.err { color: var(--accent-alert); background: rgba(214, 69, 90, 0.08); border-color: rgba(214, 69, 90, 0.22); }
+
+/* ================================================================
+   STUDY ROOM — session context, AI suggestion CTA, dual ring, topic
+   picker, and end-of-session recap. Stays in the app's existing
+   GUtech-blue system (not cp-scope's palette) since this screen never
+   adopted that; Fraunces is borrowed just for the topic title, to give
+   "what you're studying" the same visual weight the countdown has.
+   ================================================================ */
+
+.study-context-card {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-surface);
+  border: 1.5px dashed var(--border-hi);
+  border-radius: 16px;
+  padding: 13px 15px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.study-context-card.is-active {
+  border-style: solid;
+  border-color: var(--cp-accent, var(--gu-blue));
+  background: var(--cp-accent-tint, var(--gu-blue-tint));
+}
+.study-context-icon {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  background: var(--cp-accent-tint, var(--gu-blue-tint));
+  color: var(--cp-accent-deep, var(--gu-blue));
+}
+.study-context-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.study-context-label { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); }
+.study-context-title { font-family: 'Fraunces', Georgia, serif; font-size: 15.5px; font-weight: 600; color: var(--text-main); }
+.study-context-item { font-size: 12px; color: var(--text-muted); }
+.study-context-change { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--gu-blue); }
+
+.study-active-topic {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 15px; font-weight: 600;
+  color: var(--gu-blue);
+  margin-bottom: 10px;
+}
+
+.timer-daily-caption { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: -6px; margin-bottom: 4px; }
+
+.timer-ring-outer { position: absolute; inset: -10px; }
+.timer-ring-track-outer { fill: none; stroke: var(--border-dim); stroke-width: 4; }
+.timer-ring-fill-outer { fill: none; stroke: var(--accent-second); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.6s var(--ease-out); }
+
+.study-dnd-hint { text-align: center; font-size: 11.5px; color: var(--text-dim); margin: 10px 0 2px; }
+
+.session-log { background: var(--bg-surface-alt); border-radius: 12px; padding: 8px 12px; margin-top: 8px; }
+.session-log-empty { font-size: 12px; color: var(--text-dim); text-align: center; padding: 4px 0; }
+.session-log-row { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-muted); padding: 4px 0; }
+.session-log-row + .session-log-row { border-top: 1px solid var(--border-dim); }
+
+.ai-suggest-cta {
+  margin-top: 10px;
+  font-size: 12.5px; font-weight: 700;
+  color: #fff;
+  background: var(--gu-blue);
+  border: none;
+  border-radius: 100px;
+  padding: 8px 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* -------- topic picker sheet -------- */
+.topic-picker-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.topic-picker-item { background: var(--bg-surface-alt); border-radius: 14px; overflow: hidden; }
+.topic-picker-row {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  text-align: left;
+  background: none; border: none; cursor: pointer;
+  padding: 11px 12px;
+}
+.topic-picker-icon {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 9px;
+  background: var(--cp-accent-tint, var(--gu-blue-tint));
+  color: var(--cp-accent-deep, var(--gu-blue));
+}
+.topic-picker-body { display: flex; flex-direction: column; gap: 1px; }
+.topic-picker-title { font-size: 14px; font-weight: 700; color: var(--text-main); }
+.topic-picker-meta { font-size: 11.5px; color: var(--text-dim); }
+.item-chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
+.item-chip {
+  font-size: 12px; font-weight: 600;
+  color: var(--cp-accent-deep, var(--gu-blue));
+  background: var(--cp-accent-tint, var(--gu-blue-tint));
+  border: none; border-radius: 100px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* -------- session recap sheet -------- */
+.recap-summary { font-size: 13.5px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; }
+.recap-summary strong { color: var(--text-main); }
+.distraction-note {
+  font-size: 12px; color: var(--text-dim);
+  background: var(--bg-surface-alt);
+  border-radius: 10px; padding: 8px 11px;
+  margin-bottom: 14px;
+}
+.recap-block { margin-bottom: 16px; }
+.recap-label { display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); margin-bottom: 8px; }
+.recap-yn {
+  flex: 1;
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-surface-alt);
+  border: 1.5px solid var(--border-dim);
+  border-radius: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+.recap-yn.is-active { color: var(--gu-blue); background: var(--gu-blue-tint); border-color: var(--gu-blue); }
