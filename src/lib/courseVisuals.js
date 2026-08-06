@@ -1,14 +1,15 @@
-// Per-course accent identity for the Course Planner. Six warm,
-// distinct hues (not one blue + gray) so a student can recognize a
-// course by its color before reading the label — deterministic by
-// course id, so the same course always lands on the same hue.
+// Per-course accent identity for the Course Planner — six shades within
+// GUtech's own blue family (matching MEMBER_COLORS in roomColors.js),
+// not an unrelated warm palette, so a student can still tell courses
+// apart by color without the app looking like it's wearing two
+// different brands. Deterministic by course id.
 export const COURSE_ACCENTS = [
-  { name: 'terracotta', solid: '#C1502E', tint: '#F5E1D6', deep: '#8C3A20' },
-  { name: 'teal',       solid: '#1F7A6C', tint: '#DBEEE9', deep: '#155A4F' },
-  { name: 'ochre',      solid: '#BD860F', tint: '#F6E8C8', deep: '#8C6308' },
-  { name: 'plum',       solid: '#7C4A8A', tint: '#EBDCEF', deep: '#5B3665' },
-  { name: 'sage',       solid: '#57794C', tint: '#E1EAD9', deep: '#3E5B36' },
-  { name: 'denim',      solid: '#48598C', tint: '#DFE3F1', deep: '#333F63' },
+  { name: 'gu-blue',    solid: '#0057A8', tint: '#DCE9F7', deep: '#003E7A' },
+  { name: 'deep-blue',  solid: '#003E7A', tint: '#D7E1EE', deep: '#00294F' },
+  { name: 'mid-blue',   solid: '#5D82B8', tint: '#E3EAF5', deep: '#3E5D8A' },
+  { name: 'rwth-blue',  solid: '#6D93CE', tint: '#E7EEF9', deep: '#4A6BA0' },
+  { name: 'blue-grey',  solid: '#4A6485', tint: '#E1E7ED', deep: '#33455E' },
+  { name: 'slate-blue', solid: '#3B5578', tint: '#DEE4EC', deep: '#253A54' },
 ];
 
 function hash(str) {

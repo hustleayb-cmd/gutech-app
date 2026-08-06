@@ -1922,34 +1922,31 @@ nav button[data-on='1'] {
 
 /* ================================================================
    COURSE PLANNER — its own visual system, scoped under .cp-scope.
-   Warm/editorial rather than the rest of the app's cool GUtech blue,
-   on purpose: this is the "sit down and study" corner of the app, not
-   a records/admin screen, so it earns a distinct, warmer identity
-   instead of inheriting the SaaS-dashboard look everywhere else uses.
-   Per-course accent colors arrive as inline custom properties
-   (--cp-accent / --cp-accent-tint / --cp-accent-deep) from
-   accentForCourse() in src/lib/courseVisuals.js.
+   Same GUtech blue system as the rest of the app (aliased straight to
+   the app-wide tokens, so light/dark both stay in sync automatically —
+   no separate palette to maintain here). What's genuinely new to this
+   corner is the Fraunces/Karla type pairing, the segmented "chapters
+   filled in" progress, the textured Up Next hero, and per-course blue
+   shades (from accentForCourse() in src/lib/courseVisuals.js) — not a
+   different color identity.
    ================================================================ */
 .cp-scope {
-  --cp-bg:        #FBF5EA;
-  --cp-bg-alt:    #F3E9D6;
-  --cp-surface:   #FFFCF6;
-  --cp-ink:       #2B2118;
-  --cp-ink-soft:  #4A3D2F;
-  --cp-ink-muted: #7C6C56;
-  --cp-ink-dim:   #A8987E;
-  --cp-border:    #E9DCC2;
-  --cp-cream:     #FFFAEF;
-  --cp-shadow:    0 12px 28px -14px rgba(43, 33, 24, 0.35);
-  --cp-shadow-lg: 0 20px 44px -16px rgba(43, 33, 24, 0.4);
+  --cp-bg:        var(--bg-base);
+  --cp-bg-alt:    var(--bg-surface-alt);
+  --cp-surface:   var(--bg-surface);
+  --cp-ink:       var(--text-main);
+  --cp-ink-soft:  var(--text-main);
+  --cp-ink-muted: var(--text-muted);
+  --cp-ink-dim:   var(--text-dim);
+  --cp-border:    var(--border-dim);
+  --cp-cream:     var(--text-on-blue);
+  --cp-shadow:    var(--shadow-card);
+  --cp-shadow-lg: var(--shadow-dock);
   --cp-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --cp-font-body: 'Karla', var(--font-sans);
 
-  /* Explicit (non-inverting) button pair — --cp-ink itself flips light
-     in dark mode since it's also body text, which would otherwise wash
-     the primary button out to near-invisible contrast against its own label. */
-  --cp-btn-bg:   #2B2118;
-  --cp-btn-text: #FFFAEF;
+  --cp-btn-bg:   var(--gu-blue);
+  --cp-btn-text: var(--text-on-blue);
 
   font-family: var(--cp-font-body);
   color: var(--cp-ink);
@@ -1957,23 +1954,6 @@ nav button[data-on='1'] {
   margin: -4px -16px 0;
   padding: 16px 16px 4px;
   min-height: 100%;
-}
-
-@media (prefers-color-scheme: dark) {
-  .cp-scope {
-    --cp-bg:        #1D1811;
-    --cp-bg-alt:    #241D14;
-    --cp-surface:   #29221A;
-    --cp-ink:       #F3EADC;
-    --cp-ink-soft:  #DFD1BA;
-    --cp-ink-muted: #AC9C82;
-    --cp-ink-dim:   #7C6C56;
-    --cp-border:    #3A3024;
-    --cp-shadow:    0 14px 30px -14px rgba(0, 0, 0, 0.55);
-    --cp-shadow-lg: 0 22px 46px -16px rgba(0, 0, 0, 0.6);
-    --cp-btn-bg:    #F3EADC;
-    --cp-btn-text:  #241D14;
-  }
 }
 
 .cp-scope h1, .cp-scope h2, .cp-scope h3 { font-family: var(--cp-font-display); color: var(--cp-ink); letter-spacing: -0.01em; }
@@ -2109,7 +2089,11 @@ nav button[data-on='1'] {
 .cp-segtrack-pct {
   font-family: var(--cp-font-body);
   font-size: 12px; font-weight: 800;
-  color: var(--cp-accent-deep, var(--cp-ink-soft));
+  /* Plain theme-aware ink, not the fixed-hex accent-deep — that text
+     sits directly on the card surface (no tint chip under it), and the
+     accent-deep hexes are tuned for contrast on a light tint, not on a
+     dark-mode surface. */
+  color: var(--cp-ink-soft);
   min-width: 30px; text-align: right;
 }
 .cp-course-card .cp-segtrack { margin-top: 0; }
@@ -2157,7 +2141,10 @@ nav button[data-on='1'] {
   display: inline-flex; align-items: center; gap: 6px;
   margin-top: 14px;
   font-family: var(--cp-font-body); font-size: 12.5px; font-weight: 800;
-  background: var(--cp-cream); color: var(--cp-ink);
+  /* Fixed pair, not theme-flipping tokens — this pill always sits on
+     the course's solid accent color, so it needs to stay a light chip
+     with dark text regardless of light/dark mode. */
+  background: #FFFFFF; color: #101A2E;
   border-radius: 100px; padding: 9px 16px;
   position: relative;
 }
@@ -2198,6 +2185,10 @@ nav button[data-on='1'] {
 .cp-checklist-item-title { font-family: var(--cp-font-body); font-size: 14px; color: var(--cp-ink-soft); line-height: 1.5; }
 .cp-mastered-badge {
   position: absolute; top: 12px; right: 14px;
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--cp-accent-tint, var(--cp-bg-alt));
   color: var(--cp-accent-deep, var(--cp-ink));
 }
 
@@ -2270,4 +2261,4 @@ nav button[data-on='1'] {
   margin-bottom: 12px;
   line-height: 1.5;
 }
-.cp-notice.err { color: #8C3A20; background: #F5E1D6; border-color: #E8C4AE; }
+.cp-notice.err { color: var(--accent-alert); background: rgba(214, 69, 90, 0.08); border-color: rgba(214, 69, 90, 0.22); }
