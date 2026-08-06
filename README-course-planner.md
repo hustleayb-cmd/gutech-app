@@ -7,14 +7,19 @@ browser, so the keys never ship to a student's device.
 ## 1. Google Cloud API key
 
 1. [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project
-2. **APIs & Services → Library** → enable **Google Docs API** and **Google Slides API**
+2. **APIs & Services → Library** → enable **Google Docs API**, **Google Slides API**, and **Google Drive API** (all three — Drive API is what lets it read uploaded PDFs/Word docs, not just native Google Docs/Slides)
 3. **APIs & Services → Credentials → Create Credentials → API key**
 4. Copy the key
 
-This only works for docs/slides shared as **"Anyone with the link can view"** —
-reading a privately-shared doc would need full OAuth, which needs Google's
+This only works for files shared as **"Anyone with the link can view"** —
+reading a privately-shared file would need full OAuth, which needs Google's
 app-verification review (a multi-week process), so this version
 deliberately skips that.
+
+**Supported link types:** native Google Docs, native Google Slides, and
+uploaded PDF or `.docx` files in Drive. PDF/Word extraction is new and
+**hasn't been tested against a real file yet** — verify it actually works
+before relying on it for real course material.
 
 ## 2. OpenAI API key
 

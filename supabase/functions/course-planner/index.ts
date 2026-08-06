@@ -1,17 +1,27 @@
 // Supabase Edge Function — the only place that ever touches the
-// OpenAI and Google Docs/Slides API keys. Deploy with:
+// OpenAI and Google Docs/Slides/Drive API keys. Deploy with:
 //   supabase functions deploy course-planner
 // Requires these secrets set first (see README-course-planner.md):
 //   supabase secrets set OPENAI_API_KEY=sk-...
 //   supabase secrets set GOOGLE_API_KEY=...
+// GOOGLE_API_KEY's project needs Docs API, Slides API, AND Drive API
+// all enabled — Drive API is what lets this read PDFs/Word docs, not
+// just native Google Docs/Slides.
 //
 // Two actions, dispatched by `action` in the POST body:
-//   "generate" — fetch a Google Doc/Slides link, ask OpenAI to break
-//                it into topics + a grounded checklist, save both.
+//   "generate" — fetch a Drive link (Doc, Slides, PDF, or Word doc),
+//                ask OpenAI to break it into topics + a grounded
+//                checklist, save both.
 //   "explain"  — answer a question about one checklist item, grounded
 //                in the same source content, scoped to that topic.
+//
+// PDF/DOCX extraction is new and untested against a real file as of
+// this writing (no local Deno runtime or live credentials available
+// while writing it) — verify it actually works before relying on it.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { extractText as extractPdfText } from 'https://esm.sh/unpdf@0.11.0';
+import mammoth from 'https://esm.sh/mammoth@1.8.0';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
@@ -147,24 +157,66 @@ async function handleExplain(admin: ReturnType<typeof createClient>, userId: str
   return json({ answer });
 }
 
-// ---- Google Docs / Slides content extraction ----
+// ---- Content extraction: native Docs/Slides, plus uploaded PDF/Word
+// files via the Drive API. Any of these link shapes work:
+//   docs.google.com/document/d/{id}/...        (native Google Doc)
+//   docs.google.com/presentation/d/{id}/...    (native Google Slides)
+//   drive.google.com/file/d/{id}/...           (uploaded PDF, .docx, etc.)
 async function fetchGoogleDocContent(link: string): Promise<string> {
   const docMatch = link.match(/document\/d\/([a-zA-Z0-9_-]+)/);
   const slideMatch = link.match(/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  const fileMatch = link.match(/file\/d\/([a-zA-Z0-9_-]+)/) || link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
 
-  if (docMatch) {
-    const res = await fetch(`https://docs.googleapis.com/v1/documents/${docMatch[1]}?key=${GOOGLE_API_KEY}`);
-    if (!res.ok) throw new Error(`Google Docs API error (${res.status}) — check the link is publicly viewable and the Docs API is enabled.`);
-    const doc = await res.json();
-    return flattenDocsContent(doc);
+  if (docMatch) return fetchNativeDoc(docMatch[1]);
+  if (slideMatch) return fetchNativeSlides(slideMatch[1]);
+
+  if (fileMatch) {
+    const fileId = fileMatch[1];
+    // Ask Drive what this actually is before deciding how to read it —
+    // an uploaded file could be a native Doc/Slides shortcut, a PDF, a
+    // Word doc, or something we don't support at all.
+    const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=mimeType,name&key=${GOOGLE_API_KEY}`);
+    if (!metaRes.ok) throw new Error(`Google Drive API error (${metaRes.status}) — check the file is shared as "Anyone with the link" and the Drive API is enabled on your Google Cloud project.`);
+    const meta = await metaRes.json();
+    const mime = meta.mimeType as string;
+
+    if (mime === 'application/vnd.google-apps.document') return fetchNativeDoc(fileId);
+    if (mime === 'application/vnd.google-apps.presentation') return fetchNativeSlides(fileId);
+
+    if (mime === 'application/pdf') {
+      const bytes = await downloadDriveFile(fileId);
+      const { text } = await extractPdfText(new Uint8Array(bytes), { mergePages: true });
+      return (Array.isArray(text) ? text.join('\n') : text).trim();
+    }
+
+    if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      const bytes = await downloadDriveFile(fileId);
+      const result = await mammoth.extractRawText({ arrayBuffer: bytes });
+      return (result.value ?? '').trim();
+    }
+
+    throw new Error(`This file type (${mime}) isn't supported yet — only native Google Docs/Slides, PDF, and .docx are.`);
   }
-  if (slideMatch) {
-    const res = await fetch(`https://slides.googleapis.com/v1/presentations/${slideMatch[1]}?key=${GOOGLE_API_KEY}`);
-    if (!res.ok) throw new Error(`Google Slides API error (${res.status}) — check the link is publicly viewable and the Slides API is enabled.`);
-    const pres = await res.json();
-    return flattenSlidesContent(pres);
-  }
-  throw new Error('Link must be a docs.google.com/document/... or .../presentation/... URL.');
+
+  throw new Error('Link must be a docs.google.com or drive.google.com file link.');
+}
+
+async function fetchNativeDoc(id: string): Promise<string> {
+  const res = await fetch(`https://docs.googleapis.com/v1/documents/${id}?key=${GOOGLE_API_KEY}`);
+  if (!res.ok) throw new Error(`Google Docs API error (${res.status}) — check the link is publicly viewable and the Docs API is enabled.`);
+  return flattenDocsContent(await res.json());
+}
+
+async function fetchNativeSlides(id: string): Promise<string> {
+  const res = await fetch(`https://slides.googleapis.com/v1/presentations/${id}?key=${GOOGLE_API_KEY}`);
+  if (!res.ok) throw new Error(`Google Slides API error (${res.status}) — check the link is publicly viewable and the Slides API is enabled.`);
+  return flattenSlidesContent(await res.json());
+}
+
+async function downloadDriveFile(fileId: string): Promise<ArrayBuffer> {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GOOGLE_API_KEY}`);
+  if (!res.ok) throw new Error(`Google Drive download error (${res.status}) — check the file is shared as "Anyone with the link".`);
+  return await res.arrayBuffer();
 }
 
 function flattenDocsContent(doc: any): string {
