@@ -28,6 +28,10 @@ const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const MODEL = Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini';
+// Needs actual vision/file-reading support — gpt-4o-mini's file
+// handling is weaker than gpt-4o's, so this defaults to the larger
+// model specifically for the PDF-vision path (costs more per call).
+const VISION_MODEL = Deno.env.get('OPENAI_VISION_MODEL') || 'gpt-4o';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -98,15 +102,26 @@ async function handleGenerate(admin: ReturnType<typeof createClient>, userId: st
   const { data: course } = await admin.from('courses').select('id').eq('id', courseId).eq('user_id', userId).maybeSingle();
   if (!course) return json({ error: 'Course not found or not yours.' }, 404);
 
-  const content = await fetchGoogleDocContent(sourceLink);
-  if (!content || content.trim().length < 40) {
-    return json({ error: "Couldn't read enough content from that link — make sure it's shared as \"Anyone with the link can view\"." }, 422);
+  const fetched = await fetchGoogleDocContent(sourceLink);
+
+  // Diagram/image-heavy PDFs: plain text extraction alone misses too
+  // much (confirmed during testing — a mostly-visual slide deck PDF
+  // only yields the sparse text objects, none of the diagram content).
+  // For PDFs specifically, hand the actual file to a vision-capable
+  // model instead of just its extracted text, so it can read diagrams
+  // the same way a student looking at the page would.
+  let topics;
+  if (fetched.pdfBytes) {
+    topics = await generateTopicsFromPdfVision(fetched.pdfBytes, fetched.filename ?? 'source.pdf');
+  } else {
+    if (!fetched.text || fetched.text.trim().length < 40) {
+      return json({ error: "Couldn't read enough content from that link — make sure it's shared as \"Anyone with the link can view\"." }, 422);
+    }
+    topics = await generateTopics(fetched.text);
   }
 
-  const topics = await generateTopics(content);
-
   await admin.from('course_materials').insert({
-    course_id: courseId, source_link: sourceLink, extracted_content: content.slice(0, 100000), last_synced_at: new Date().toISOString(),
+    course_id: courseId, source_link: sourceLink, extracted_content: (fetched.text ?? '').slice(0, 100000), last_synced_at: new Date().toISOString(),
   });
 
   // Replace any previous breakdown for this course on regenerate.
@@ -157,18 +172,27 @@ async function handleExplain(admin: ReturnType<typeof createClient>, userId: str
   return json({ answer });
 }
 
+interface FetchedContent {
+  text?: string;
+  pdfBytes?: Uint8Array;
+  filename?: string;
+}
+
 // ---- Content extraction: native Docs/Slides, plus uploaded PDF/Word
 // files via the Drive API. Any of these link shapes work:
 //   docs.google.com/document/d/{id}/...        (native Google Doc)
 //   docs.google.com/presentation/d/{id}/...    (native Google Slides)
 //   drive.google.com/file/d/{id}/...           (uploaded PDF, .docx, etc.)
-async function fetchGoogleDocContent(link: string): Promise<string> {
+// PDFs return their raw bytes too (see pdfBytes) so the caller can hand
+// the actual file to a vision model instead of relying only on
+// extracted text, which misses diagram/image content.
+async function fetchGoogleDocContent(link: string): Promise<FetchedContent> {
   const docMatch = link.match(/document\/d\/([a-zA-Z0-9_-]+)/);
   const slideMatch = link.match(/presentation\/d\/([a-zA-Z0-9_-]+)/);
   const fileMatch = link.match(/file\/d\/([a-zA-Z0-9_-]+)/) || link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
 
-  if (docMatch) return fetchNativeDoc(docMatch[1]);
-  if (slideMatch) return fetchNativeSlides(slideMatch[1]);
+  if (docMatch) return { text: await fetchNativeDoc(docMatch[1]) };
+  if (slideMatch) return { text: await fetchNativeSlides(slideMatch[1]) };
 
   if (fileMatch) {
     const fileId = fileMatch[1];
@@ -182,20 +206,21 @@ async function fetchGoogleDocContent(link: string): Promise<string> {
     }
     const meta = await metaRes.json();
     const mime = meta.mimeType as string;
+    const filename = meta.name as string | undefined;
 
-    if (mime === 'application/vnd.google-apps.document') return fetchNativeDoc(fileId);
-    if (mime === 'application/vnd.google-apps.presentation') return fetchNativeSlides(fileId);
+    if (mime === 'application/vnd.google-apps.document') return { text: await fetchNativeDoc(fileId) };
+    if (mime === 'application/vnd.google-apps.presentation') return { text: await fetchNativeSlides(fileId) };
 
     if (mime === 'application/pdf') {
-      const bytes = await downloadDriveFile(fileId);
-      const { text } = await extractPdfText(new Uint8Array(bytes), { mergePages: true });
-      return (Array.isArray(text) ? text.join('\n') : text).trim();
+      const bytes = new Uint8Array(await downloadDriveFile(fileId));
+      const { text } = await extractPdfText(bytes, { mergePages: true }).catch(() => ({ text: '' }));
+      return { text: (Array.isArray(text) ? text.join('\n') : text).trim(), pdfBytes: bytes, filename };
     }
 
     if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       const bytes = await downloadDriveFile(fileId);
       const result = await mammoth.extractRawText({ arrayBuffer: bytes });
-      return (result.value ?? '').trim();
+      return { text: (result.value ?? '').trim() };
     }
 
     throw new Error(`This file type (${mime}) isn't supported yet — only native Google Docs/Slides, PDF, and .docx are.`);
@@ -253,6 +278,70 @@ async function generateTopics(sourceContent: string) {
   ], { json: true });
   const parsed = JSON.parse(raw);
   return parsed.topics ?? [];
+}
+
+// Vision path for diagram/image-heavy PDFs — uploads the actual file to
+// OpenAI and asks a vision-capable model to read it directly (including
+// diagrams/screenshots), via the Responses API's file input support.
+// This is new, unverified against a real PDF as of writing — if the
+// response parsing below doesn't match what the API actually returns,
+// that's the first thing to check.
+async function generateTopicsFromPdfVision(pdfBytes: Uint8Array, filename: string) {
+  const fileId = await uploadFileToOpenAI(pdfBytes, filename);
+  try {
+    const res = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: VISION_MODEL,
+        input: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              { type: 'input_file', file_id: fileId },
+              { type: 'input_text', text: 'Read this document — including any diagrams, charts, or screenshots — and break it into topics per the system instructions.' },
+            ],
+          },
+        ],
+        text: { format: { type: 'json_object' } },
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenAI Responses API error (${res.status}): ${await res.text()}`);
+    const data = await res.json();
+
+    // The Responses API's exact output shape has shifted across
+    // versions — try the documented `output_text` convenience field
+    // first, then fall back to walking `output[].content[]`.
+    const raw = data.output_text
+      ?? data.output?.flatMap((o: any) => o.content ?? []).find((c: any) => c.type === 'output_text' || c.text)?.text
+      ?? '';
+    if (!raw) throw new Error('OpenAI Responses API returned no text — response shape may have changed, check the raw payload.');
+
+    const parsed = JSON.parse(raw);
+    return parsed.topics ?? [];
+  } finally {
+    // Best-effort cleanup — don't fail the whole request if this fails.
+    fetch(`https://api.openai.com/v1/files/${fileId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+    }).catch(() => {});
+  }
+}
+
+async function uploadFileToOpenAI(bytes: Uint8Array, filename: string): Promise<string> {
+  const form = new FormData();
+  form.append('purpose', 'user_data');
+  form.append('file', new Blob([bytes], { type: 'application/pdf' }), filename);
+
+  const res = await fetch('https://api.openai.com/v1/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+    body: form,
+  });
+  if (!res.ok) throw new Error(`OpenAI file upload error (${res.status}): ${await res.text()}`);
+  const data = await res.json();
+  return data.id;
 }
 
 async function callOpenAI(messages: { role: string; content: string }[], opts: { json: boolean }) {
