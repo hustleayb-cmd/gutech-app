@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import CoursePlanner from './CoursePlanner';
-import { loadStudyContext, buildStudySuggestion } from '../lib/studyContext';
+import { loadStudyContext } from '../lib/studyContext';
 import { nextReviewDate, CONFIDENCE_LEVELS } from '../lib/spacedReview';
 import { accentForCourse } from '../lib/courseVisuals';
-import { SubjectIcon, FaceLow, FaceMid, FaceHigh, WobbleCheck } from './CourseIcons';
-import { PlayIcon, PauseIcon, StopIcon, ResetIcon, ChartIcon, CloseIcon, SparkleIcon, TimerIcon, SparkleIcon as PlannerIcon, ChevronLeft } from './Icons';
+import { SubjectIcon, FaceLow, FaceMid, FaceHigh } from './CourseIcons';
+import { PlayIcon, PauseIcon, StopIcon, ResetIcon, ChartIcon, CloseIcon, TimerIcon, SparkleIcon as PlannerIcon } from './Icons';
 
 // A timer that's tied to real Course Planner work, not a standalone
 // stopwatch — "25:00" is supposed to mean "25 minutes on Memory
@@ -192,17 +192,6 @@ export default function StudyRoom({ userId }) {
     setPickerOpen(false);
   }
 
-  function applyAiSuggestion(cta) {
-    const topic = context.topics.find(t => t.id === cta.topicId);
-    const item = cta.itemId ? context.itemRows.find(i => i.id === cta.itemId) : null;
-    setSessionTopic(topic ? { topic, item } : null);
-    setMode('pomodoro');
-    setDurations(prev => ({ ...prev, pomodoro: cta.minutes }));
-    // start() reads sessionTopic/durations from state, which won't have
-    // committed yet this tick — defer one frame so it picks up both.
-    setTimeout(() => start(), 0);
-  }
-
   async function closeRecap({ finished, confidence, note }) {
     if (recap?.item && confidence) {
       await supabase.from('course_checklist_items').update({
@@ -241,8 +230,6 @@ export default function StudyRoom({ userId }) {
   const dailyProgress = Math.min(1, todayMinutes / DAILY_GOAL_MINUTES);
   const completedToday = context.sessionsToday.filter(s => s.mode === 'pomodoro' && s.completed);
 
-  const aiSuggestion = suggestion || recap ? null : buildStudySuggestion(context);
-
   return (
     <>
       <div className="chip-row study-segmented" style={{ marginBottom: 14 }}>
@@ -264,7 +251,6 @@ export default function StudyRoom({ userId }) {
             durations={durations} durationFill={durationFill} adjustDuration={adjustDuration}
             editingGoal={editingGoal} setEditingGoal={setEditingGoal} setRoundGoal={setRoundGoal}
             switchMode={switchMode} stop={stop} pause={pause} resume={resume} start={start} reset={reset}
-            aiSuggestion={aiSuggestion} applyAiSuggestion={applyAiSuggestion}
             sessionTopic={sessionTopic} setSessionTopic={setSessionTopic} setPickerOpen={setPickerOpen}
             outerRadius={outerRadius} outerCircumference={outerCircumference} dailyProgress={dailyProgress} todayMinutes={todayMinutes}
             completedToday={completedToday} showDots={showDots} setShowDots={setShowDots}
@@ -289,7 +275,7 @@ function TimerSection({
   statsNotice, setStatsNotice, suggestion, acceptSuggestion, setSuggestion, status, statusLabel,
   roundsCompleted, roundGoal, radius, circumference, progress, mm, ss, mode, MODES, durations, durationFill,
   adjustDuration, editingGoal, setEditingGoal, setRoundGoal, switchMode, stop, pause, resume, start, reset,
-  aiSuggestion, applyAiSuggestion, sessionTopic, setSessionTopic, setPickerOpen,
+  sessionTopic, setSessionTopic, setPickerOpen,
   outerRadius, outerCircumference, dailyProgress, todayMinutes, completedToday, showDots, setShowDots,
 }) {
   const accent = sessionTopic ? accentForCourse(sessionTopic.topic.id) : null;
@@ -452,20 +438,6 @@ function TimerSection({
           <button className="ghost icon-btn" onClick={reset} aria-label="Reset"><ResetIcon size={16} /></button>
         </div>
 
-        <div className="ai-suggest-card">
-          <div className="ai-suggest-header"><SparkleIcon size={13} /> AI Suggests</div>
-          <div className="ai-suggest-body">
-            <span className="ai-suggest-icon"><SparkleIcon size={16} /></span>
-            <div style={{ flex: 1 }}>
-              <h4>{aiSuggestion ? aiSuggestion.title : 'No active suggestions'}</h4>
-              <p>{aiSuggestion ? aiSuggestion.body : 'The break prompt above already covers what to do next.'}</p>
-              {aiSuggestion?.cta && (
-                <button className="ai-suggest-cta" onClick={() => applyAiSuggestion(aiSuggestion.cta)}>{aiSuggestion.cta.label}</button>
-              )}
-            </div>
-          </div>
-        </div>
-        <p className="study-sound-note">Suggestions are simple on-device rules for now, not a live AI call.</p>
       </div>
     </>
   );
