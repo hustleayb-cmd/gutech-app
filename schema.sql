@@ -440,6 +440,135 @@ create policy "room members can log activity" on room_activity
   for insert with check (public.is_room_member(room_id));
 
 -- ============================================================
+-- COURSE PLANNER — AI topic breakdown + spaced review (More →
+-- Course Planner). Private per student, unlike Project Rooms.
+-- The OpenAI/Google Docs calls happen server-side in a Supabase
+-- Edge Function (supabase/functions/course-planner) — the app
+-- never calls those APIs directly from the browser.
+-- ============================================================
+
+create table if not exists courses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_courses_user on courses(user_id);
+
+create table if not exists course_materials (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid not null references courses(id) on delete cascade,
+  source_link text not null,
+  extracted_content text not null default '',
+  last_synced_at timestamptz
+);
+
+create index if not exists idx_materials_course on course_materials(course_id);
+
+create table if not exists course_topics (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid not null references courses(id) on delete cascade,
+  title text not null,
+  summary text not null default '',
+  position int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_topics_course on course_topics(course_id, position);
+
+-- confidence_rating stays null until the student actually rates the
+-- item — that's what distinguishes "not reviewed" from "rated 0".
+create table if not exists course_checklist_items (
+  id uuid primary key default gen_random_uuid(),
+  topic_id uuid not null references course_topics(id) on delete cascade,
+  title text not null,
+  position int not null default 0,
+  confidence_rating int,
+  last_reviewed_at timestamptz,
+  next_review_due timestamptz
+);
+
+create index if not exists idx_checklist_topic on course_checklist_items(topic_id);
+
+create table if not exists course_chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  topic_id uuid not null references course_topics(id) on delete cascade,
+  checklist_item_id uuid references course_checklist_items(id) on delete cascade,
+  role text not null, -- user | assistant
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_chat_topic on course_chat_messages(topic_id, created_at);
+
+alter table courses enable row level security;
+alter table course_materials enable row level security;
+alter table course_topics enable row level security;
+alter table course_checklist_items enable row level security;
+alter table course_chat_messages enable row level security;
+
+-- courses
+drop policy if exists "own courses select" on courses;
+create policy "own courses select" on courses for select using (auth.uid() = user_id);
+drop policy if exists "own courses insert" on courses;
+create policy "own courses insert" on courses for insert with check (auth.uid() = user_id);
+drop policy if exists "own courses update" on courses;
+create policy "own courses update" on courses for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "own courses delete" on courses;
+create policy "own courses delete" on courses for delete using (auth.uid() = user_id);
+
+-- course_materials (reached via the parent course's owner)
+drop policy if exists "own materials select" on course_materials;
+create policy "own materials select" on course_materials for select
+  using (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+drop policy if exists "own materials insert" on course_materials;
+create policy "own materials insert" on course_materials for insert
+  with check (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+drop policy if exists "own materials update" on course_materials;
+create policy "own materials update" on course_materials for update
+  using (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+drop policy if exists "own materials delete" on course_materials;
+create policy "own materials delete" on course_materials for delete
+  using (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+
+-- course_topics
+drop policy if exists "own topics select" on course_topics;
+create policy "own topics select" on course_topics for select
+  using (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+drop policy if exists "own topics insert" on course_topics;
+create policy "own topics insert" on course_topics for insert
+  with check (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+drop policy if exists "own topics update" on course_topics;
+create policy "own topics update" on course_topics for update
+  using (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+drop policy if exists "own topics delete" on course_topics;
+create policy "own topics delete" on course_topics for delete
+  using (exists (select 1 from courses c where c.id = course_id and c.user_id = auth.uid()));
+
+-- course_checklist_items (reached via topic → course → owner)
+drop policy if exists "own checklist select" on course_checklist_items;
+create policy "own checklist select" on course_checklist_items for select
+  using (exists (select 1 from course_topics t join courses c on c.id = t.course_id where t.id = topic_id and c.user_id = auth.uid()));
+drop policy if exists "own checklist insert" on course_checklist_items;
+create policy "own checklist insert" on course_checklist_items for insert
+  with check (exists (select 1 from course_topics t join courses c on c.id = t.course_id where t.id = topic_id and c.user_id = auth.uid()));
+drop policy if exists "own checklist update" on course_checklist_items;
+create policy "own checklist update" on course_checklist_items for update
+  using (exists (select 1 from course_topics t join courses c on c.id = t.course_id where t.id = topic_id and c.user_id = auth.uid()));
+drop policy if exists "own checklist delete" on course_checklist_items;
+create policy "own checklist delete" on course_checklist_items for delete
+  using (exists (select 1 from course_topics t join courses c on c.id = t.course_id where t.id = topic_id and c.user_id = auth.uid()));
+
+-- course_chat_messages
+drop policy if exists "own chat select" on course_chat_messages;
+create policy "own chat select" on course_chat_messages for select
+  using (exists (select 1 from course_topics t join courses c on c.id = t.course_id where t.id = topic_id and c.user_id = auth.uid()));
+drop policy if exists "own chat insert" on course_chat_messages;
+create policy "own chat insert" on course_chat_messages for insert
+  with check (exists (select 1 from course_topics t join courses c on c.id = t.course_id where t.id = topic_id and c.user_id = auth.uid()));
+
+-- ============================================================
 -- VERIFY: after running, this should return 4 rows per table
 -- for notes, reminders, grades and club_memberships; 3 rows for
 -- profiles; 1 row each for announcements and clubs
