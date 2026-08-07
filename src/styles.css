@@ -340,6 +340,21 @@ main {
   border-bottom-left-radius: 4px;
 }
 
+/* Markdown rendering inside chat bubbles — bot.jsx/cp-bubble.bot both
+   use this. Kept minimal: bold/italic/code, bullet lists, paragraph
+   spacing. No table/heading support — bot replies don't need it. */
+.md-p, .md-list { margin: 0; }
+.md-p + .md-p, .md-p + .md-list, .md-list + .md-p, .md-list + .md-list { margin-top: 10px; }
+.md-list { padding-left: 20px; }
+.md-list li { margin: 3px 0; }
+.bubble code, .cp-bubble code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: rgba(127, 127, 127, 0.14);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
 .bubble.me {
   align-self: flex-end;
   background: var(--gu-blue);

@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { nextReviewDate, CONFIDENCE_LEVELS } from '../lib/spacedReview';
 import { maybeNotifyReviewsDue } from '../lib/notifications';
 import { accentForCourse } from '../lib/courseVisuals';
+import { renderMarkdown } from '../lib/markdown';
 import { SubjectIcon, WobbleCheck, FaceLow, FaceMid, FaceHigh, EmptyDoodle } from './CourseIcons';
 import { SparkleIcon, ChevronLeft, PlusIcon, ResetIcon, ChatBubbleIcon } from './Icons';
 
@@ -424,7 +425,9 @@ function ExplainChat({ topicId, itemId }) {
       )}
       <div className="cp-explain-thread">
         {messages.map(m => (
-          <div key={m.id} className={`cp-bubble ${m.role === 'user' ? 'me' : 'bot'}`}>{m.content}</div>
+          <div key={m.id} className={`cp-bubble ${m.role === 'user' ? 'me' : 'bot'}`}>
+            {m.role === 'user' ? m.content : renderMarkdown(m.content)}
+          </div>
         ))}
       </div>
       <div className="cp-explain-input">

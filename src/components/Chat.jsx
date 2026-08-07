@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { CHAT_WEBHOOK } from '../supabase';
+import { renderMarkdown } from '../lib/markdown';
 
 export default function Chat({ userId }) {
   const [msgs, setMsgs] = useState([
@@ -48,7 +49,7 @@ export default function Chat({ userId }) {
       <div className="thread">
         {msgs.map((m, i) => (
           <div className={`bubble ${m.who === 'me' ? 'me' : m.who === 'sys' ? 'sys' : 'bot'}`} key={i}>
-            {m.text}
+            {m.who === 'bot' ? renderMarkdown(m.text) : m.text}
           </div>
         ))}
         {busy && <div className="bubble sys">Looking it up</div>}
