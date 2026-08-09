@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase, CLUB_JOIN_WEBHOOK } from '../supabase';
-import { TrophyIcon, CodeIcon, PaletteIcon, MusicIcon, BriefcaseIcon, GlobeIcon, BookIcon, HeartIcon, UsersIcon, CheckIcon, IdCardIcon, ChevronRight } from './Icons';
+import { TrophyIcon, CodeIcon, PaletteIcon, MusicIcon, BriefcaseIcon, GlobeIcon, BookIcon, HeartIcon, UsersIcon, CheckIcon, IdCardIcon, ChevronRight, SyncIcon, TimerIcon } from './Icons';
+import { outlookConfigured, getOutlookAccount, whenOutlookReady, connectOutlook, createOutlookDraft } from '../lib/outlook';
 
 // Each category gets its own icon, badge tint, watermark color, and a
 // distinct one-shot "reveal" animation played the moment its panel
@@ -22,20 +23,63 @@ function metaFor(category) {
   return CATEGORY_META[category] || CATEGORY_META.general;
 }
 
+// On a phone, outlook.live.com/outlook.office.com links are registered as
+// universal/app links — the OS hands them to the installed Outlook app
+// automatically, but only for a real top-level navigation, not a new
+// browser tab (mobile browsers generally don't run that app-link handoff
+// for window.open popups). Desktop has no "app" to hand off to, so a new
+// tab showing Outlook Web is the right target there instead.
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 export default function Clubs({ userId, email, onNavigate }) {
   const [clubs, setClubs] = useState([]);
-  const [joinedIds, setJoinedIds] = useState(new Set());
+  // club_id -> { id: membership row id, status: 'pending' | 'accepted' | 'declined' }
+  // The status starts 'pending' the moment the app inserts the row, and only
+  // ever moves from there via an outside n8n automation watching the
+  // student's inbox for the club's reply — the app itself never sets
+  // 'accepted'. Realtime keeps this in sync the instant n8n flips it.
+  const [memberships, setMemberships] = useState(new Map());
   const [profile, setProfile] = useState(null);
   const [err, setErr] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [notice, setNotice] = useState('');
   const [revealedIds, setRevealedIds] = useState(new Set());
   const [activeId, setActiveId] = useState(null);
+  const [outlookAccount, setOutlookAccount] = useState(() => getOutlookAccount());
+  const [connecting, setConnecting] = useState(false);
 
   const panelRefs = useRef(new Map());
   const bgIconRefs = useRef(new Map());
 
   useEffect(() => { load(); }, []);
+
+  // Live status updates — when n8n's automation detects the club's
+  // acceptance email and PATCHes this student's membership row, this
+  // subscription pushes the change straight into the UI, no refresh needed.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`club-memberships-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_memberships', filter: `user_id=eq.${userId}` }, payload => {
+        setMemberships(prev => {
+          const next = new Map(prev);
+          if (payload.eventType === 'DELETE') {
+            next.delete(payload.old.club_id);
+          } else {
+            next.set(payload.new.club_id, { id: payload.new.id, status: payload.new.status });
+          }
+          return next;
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId]);
+
+  // Same redirect-completion timing as Calendar — the "am I connected"
+  // answer isn't final until MSAL has processed a possible redirect
+  // response after this remount.
+  useEffect(() => { whenOutlookReady().then(setOutlookAccount); }, []);
 
   // Reveal-on-scroll: each panel plays its entrance animation the first
   // time it crosses into view, then stays revealed (no re-triggering on
@@ -87,18 +131,34 @@ export default function Clubs({ userId, email, onNavigate }) {
   async function load() {
     const [c, m, p] = await Promise.all([
       supabase.from('clubs').select('*').order('name', { ascending: true }),
-      supabase.from('club_memberships').select('club_id').eq('user_id', userId),
+      supabase.from('club_memberships').select('id, club_id, status').eq('user_id', userId),
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
     ]);
     if (c.error) { setErr(c.error.message); return; }
     setClubs(c.data ?? []);
-    setJoinedIds(new Set((m.data ?? []).map(r => r.club_id)));
+    setMemberships(new Map((m.data ?? []).map(r => [r.club_id, { id: r.id, status: r.status }])));
     setProfile(p.data ?? null);
   }
 
   // A club roster is only useful if it actually has the student's details —
   // require name, student ID and program before Join does anything.
   const profileComplete = !!(profile?.full_name?.trim() && profile?.student_id?.trim() && profile?.program?.trim());
+  // Outlook connection is required too — joining sends the actual request
+  // email from the student's own mailbox, so there has to be a mailbox to
+  // send it from.
+  const outlookReady = !!outlookAccount;
+  const canJoin = profileComplete && outlookReady;
+
+  async function handleConnectOutlook() {
+    setConnecting(true);
+    setErr('');
+    try {
+      await connectOutlook('clubs'); // navigates away on success
+    } catch (e) {
+      setErr(e.message || 'Could not sign in to Outlook.');
+      setConnecting(false);
+    }
+  }
 
   // Best-effort — a confirmation email is a nice-to-have, not something
   // that should block or fail the join itself if n8n is unreachable.
@@ -123,37 +183,106 @@ export default function Clubs({ userId, email, onNavigate }) {
     }
   }
 
+  // Same template every time, just the club's name/address swapped in.
+  // Drafts (never sends) the request in the student's own Outlook Drafts
+  // folder, then hands back the webLink so the caller can open it — the
+  // student reviews and hits Send themselves, nothing goes out on its own.
+  // `refCode` (short slice of the membership row's id) rides along in the
+  // signature line so that whatever the club replies to still carries it —
+  // that's what n8n matches an acceptance email back to this exact row.
+  async function prepareClubJoinDraft(club, refCode) {
+    if (!club.contact_email) return { drafted: false, reason: 'no-address' };
+    try {
+      const firstName = profile.full_name.trim().split(/\s+/)[0] || profile.full_name;
+      const webLink = await createOutlookDraft({
+        to: club.contact_email,
+        subject: `wanna join ${club.name}`,
+        body: [
+          'Hey,',
+          '',
+          `Saw ${club.name} and figured I'd sign up — looks like a fun one to be part of. I'm in ${profile.program} (ID: ${profile.student_id}), so let me know what's next, if there's a group chat or something I should hop into.`,
+          '',
+          firstName,
+          email,
+          `Ref: ${refCode}`,
+        ].join('\n'),
+      });
+      return { drafted: true, webLink };
+    } catch (e) {
+      return { drafted: false, reason: e.message };
+    }
+  }
+
   async function toggleJoin(club) {
-    if (!profileComplete) return;
+    if (!canJoin) return;
+    const membership = memberships.get(club.id);
+    const joined = !!membership;
+    const mobile = isMobileDevice();
+
+    // Desktop only: open the tab synchronously, in the same tick as this
+    // click — same reasoning as the Outlook sign-in redirect, any `await`
+    // in front of window.open() is enough for the browser to treat it as
+    // an unrequested popup and block it. We navigate this already-open
+    // blank tab to the real draft link once we have it (or close it if
+    // there's nothing to show). Mobile skips this entirely — it navigates
+    // the current page instead, see below.
+    const draftTab = !joined && !mobile ? window.open('', '_blank', 'noopener,noreferrer') : null;
+
     setBusyId(club.id);
     setNotice('');
-    const joined = joinedIds.has(club.id);
-    const { error } = joined
-      ? await supabase.from('club_memberships').delete().eq('user_id', userId).eq('club_id', club.id)
-      // Snapshot the student's profile onto the membership row itself —
-      // one table, filterable per club_id, no per-club table sprawl needed
-      // to answer "who's in Robotics Club and what's their student ID".
-      : await supabase.from('club_memberships').insert({
-          user_id: userId,
-          club_id: club.id,
-          full_name: profile.full_name,
-          student_id: profile.student_id,
-          program: profile.program,
-        });
+
+    if (joined) {
+      const { error } = await supabase.from('club_memberships').delete().eq('user_id', userId).eq('club_id', club.id);
+      if (error) { draftTab?.close(); setBusyId(null); setErr(error.message); return; }
+      setMemberships(prev => { const next = new Map(prev); next.delete(club.id); return next; });
+      setBusyId(null);
+      return;
+    }
+
+    // Snapshot the student's profile onto the membership row itself — one
+    // table, filterable per club_id, no per-club table sprawl needed to
+    // answer "who's in Robotics Club and what's their student ID". status
+    // defaults to 'pending' in the DB; .select().single() hands back the
+    // new row's id so we can drop a short reference into the email.
+    const { data: inserted, error } = await supabase
+      .from('club_memberships')
+      .insert({
+        user_id: userId,
+        club_id: club.id,
+        full_name: profile.full_name,
+        student_id: profile.student_id,
+        program: profile.program,
+      })
+      .select('id, status')
+      .single();
+
+    if (error) { draftTab?.close(); setBusyId(null); setErr(error.message); return; }
+
+    setMemberships(prev => { const next = new Map(prev); next.set(club.id, { id: inserted.id, status: inserted.status }); return next; });
+
+    notifyJoin(club);
+    const refCode = inserted.id.slice(0, 8).toUpperCase();
+    const result = await prepareClubJoinDraft(club, refCode);
     setBusyId(null);
-    if (error) { setErr(error.message); return; }
-
-    setJoinedIds(prev => {
-      const next = new Set(prev);
-      joined ? next.delete(club.id) : next.add(club.id);
-      return next;
-    });
-
-    if (!joined) {
-      notifyJoin(club);
-      setNotice(CLUB_JOIN_WEBHOOK
-        ? `You're in ${club.name}. A confirmation email is on its way.`
-        : `You're in ${club.name}.`);
+    if (result.drafted) {
+      setNotice(`You're in ${club.name} — waiting on their response. Opening your ready-to-send email in Outlook — review it and hit Send.`);
+      if (mobile) {
+        // Top-level navigation, not a new tab — this is what lets iOS/
+        // Android hand off to the installed Outlook app instead of just
+        // opening the mobile browser.
+        window.location.href = result.webLink;
+      } else if (draftTab) {
+        draftTab.location.href = result.webLink;
+      } else {
+        window.open(result.webLink, '_blank', 'noopener,noreferrer'); // popup was blocked before we could open it — try again, best-effort
+      }
+    } else {
+      draftTab?.close();
+      if (result.reason === 'no-address') {
+        setNotice(`You're in ${club.name}. (No contact email is set for this club yet, so no draft was prepared.)`);
+      } else {
+        setNotice(`You're in ${club.name}, but preparing the email draft failed: ${result.reason}`);
+      }
     }
   }
 
@@ -182,6 +311,26 @@ export default function Clubs({ userId, email, onNavigate }) {
         </div>
       )}
 
+      {profileComplete && !outlookReady && (
+        <div className="notice err profile-gate">
+          <div>
+            <strong>Connect Outlook to join a club.</strong>
+            <p style={{ margin: '4px 0 0' }}>
+              Joining prepares a ready-to-send request email in your own Outlook — we need it connected first.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ghost"
+            onClick={handleConnectOutlook}
+            disabled={connecting || !outlookConfigured()}
+            title={outlookConfigured() ? undefined : 'Outlook sync is not configured yet'}
+          >
+            <SyncIcon size={14} /> {connecting ? 'Connecting…' : 'Connect Outlook'}
+          </button>
+        </div>
+      )}
+
       {clubs.length === 0 && !err && (
         <div className="empty">
           <div className="k"><UsersIcon size={14} /> No clubs listed yet</div>
@@ -202,7 +351,9 @@ export default function Clubs({ userId, email, onNavigate }) {
               {clubs.map(club => {
                 const meta = metaFor(club.category);
                 const { Icon } = meta;
-                const joined = joinedIds.has(club.id);
+                const membership = memberships.get(club.id);
+                const joined = !!membership;
+                const status = membership?.status ?? null;
                 const revealed = revealedIds.has(club.id);
                 return (
                   <div
@@ -228,12 +379,15 @@ export default function Clubs({ userId, email, onNavigate }) {
                       <p className="club-panel-desc">{club.description}</p>
                       <button
                         type="button"
-                        className={`club-join-btn ${joined ? 'is-joined' : ''}`}
+                        className={`club-join-btn ${status === 'accepted' ? 'is-joined' : status === 'pending' ? 'is-pending' : status === 'declined' ? 'is-declined' : ''}`}
                         onClick={() => toggleJoin(club)}
-                        disabled={busyId === club.id || (!profileComplete && !joined)}
-                        title={!profileComplete && !joined ? 'Complete your profile first' : undefined}
+                        disabled={busyId === club.id || (!canJoin && !joined)}
+                        title={!canJoin && !joined ? (!profileComplete ? 'Complete your profile first' : 'Connect Outlook first') : status === 'declined' ? 'Not accepted — tap to remove and try again' : undefined}
                       >
-                        {joined ? <><CheckIcon size={14} /> Joined</> : 'Join'}
+                        {status === 'accepted' ? <><CheckIcon size={14} /> Accepted</>
+                          : status === 'pending' ? <><TimerIcon size={14} /> Waiting for response</>
+                          : status === 'declined' ? 'Not accepted'
+                          : 'Join'}
                       </button>
                     </div>
                   </div>

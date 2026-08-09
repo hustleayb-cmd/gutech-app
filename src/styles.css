@@ -246,6 +246,31 @@ main {
 .stamp.badge-cat-event { color: var(--cat-event); background: rgba(31, 157, 107, 0.1); border: 1px solid rgba(31, 157, 107, 0.2); }
 .stamp.badge-cat-deadline { color: var(--cat-deadline); background: rgba(201, 134, 11, 0.1); border: 1px solid rgba(201, 134, 11, 0.2); }
 
+.note-meta { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 6px; }
+
+/* ============ MOTIVATION ============ */
+.motivation-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 34px 26px 26px;
+  margin-top: 4px;
+}
+
+.motivation-mark { color: var(--gu-light-blue); margin-bottom: 14px; }
+
+.motivation-text {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  color: var(--text-main);
+  max-width: 44ch;
+}
+
+.motivation-shuffle { margin-top: 22px; }
+
 .row {
   display: flex;
   align-items: center;
@@ -539,11 +564,40 @@ main {
 
 .chip.chip-on { color: var(--text-on-blue); background: var(--gu-blue); border-color: var(--gu-blue); }
 
-.announcement-card { border-left: 4px solid var(--cat-general); cursor: pointer; }
+/* Outlook sync — Microsoft's own blue, kept visually distinct from the
+   GUtech-blue chips so "this came from outside the app" reads at a glance. */
+.chip.chip-outlook {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #0F6CBD; background: #EAF3FC; border-color: rgba(15, 108, 189, 0.25);
+}
+.chip.chip-outlook:disabled { opacity: 0.5; cursor: not-allowed; }
+.chip.chip-outlook .spin { animation: outlook-spin 0.9s linear infinite; }
+@keyframes outlook-spin { to { transform: rotate(360deg); } }
+
+.strip-dot.strip-dot-outlook { background: #0F6CBD; }
+
+.agenda-reminder.source-outlook {
+  border-left-color: #0F6CBD;
+  text-decoration: none;
+  cursor: pointer;
+}
+.agenda-reminder.source-outlook .agenda-reminder-title { color: var(--text-main); }
+.agenda-reminder.source-outlook svg { color: #0F6CBD; flex-shrink: 0; }
+
+.announcement-card {
+  border-left: 4px solid var(--cat-general);
+  cursor: pointer;
+  padding: 0;         /* .announcement-card-body carries the padding instead, so the art can bleed full-width */
+  overflow: hidden;   /* clips the art's corners to the card's own border-radius */
+}
 .announcement-card.cat-general { border-left-color: var(--cat-general); }
 .announcement-card.cat-academic { border-left-color: var(--cat-academic); }
 .announcement-card.cat-event { border-left-color: var(--cat-event); }
 .announcement-card.cat-deadline { border-left-color: var(--cat-deadline); }
+
+.announcement-art { display: block; width: 100%; height: 118px; }
+
+.announcement-card-body { padding: 16px 22px 20px; }
 .announcement-date { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); white-space: nowrap; }
 .pin-icon { color: var(--accent-amber); flex-shrink: 0; }
 
@@ -720,6 +774,28 @@ main {
   color: var(--accent-success);
 }
 .club-join-btn.is-joined:hover { background: rgba(31, 157, 107, 0.18); }
+
+/* Request sent, waiting on the club to reply — n8n flips this to
+   is-joined once it detects the acceptance email. */
+.club-join-btn.is-pending {
+  width: auto;
+  min-width: 180px;
+  padding: 12px 16px;
+  background: rgba(212, 149, 43, 0.1);
+  border-color: rgba(212, 149, 43, 0.3);
+  color: var(--accent-amber);
+}
+.club-join-btn.is-pending:hover { background: rgba(212, 149, 43, 0.18); }
+
+.club-join-btn.is-declined {
+  width: auto;
+  min-width: 180px;
+  padding: 12px 16px;
+  background: rgba(214, 69, 69, 0.08);
+  border-color: rgba(214, 69, 69, 0.25);
+  color: var(--accent-alert);
+}
+.club-join-btn.is-declined:hover { background: rgba(214, 69, 69, 0.14); }
 
 /* ---- progress rail ---- */
 .club-rail {
@@ -1071,34 +1147,83 @@ main {
   gap: 2px;
 }
 
+/* Taller Outlook-mobile-style cells — each day shows a couple of titled
+   event chips instead of just colored dots, so you can read what's
+   happening without tapping in. */
 .month-cell {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-start;
   gap: 3px;
-  padding: 7px 0 8px;
-  min-height: 44px;
+  padding: 5px 3px 6px;
+  min-height: 62px;
   background: transparent;
   border: none;
   border-radius: 10px;
   cursor: pointer;
   touch-action: manipulation;
   transition: all 0.2s var(--ease-out);
+  text-align: left;
 }
 
 .month-cell:hover { background: var(--bg-surface-alt); }
 
-.month-cell-num { font-size: 13.5px; font-weight: 700; color: var(--text-main); }
+.month-cell-top { display: flex; align-items: center; justify-content: space-between; padding: 0 1px; }
+
+.month-cell-num { font-size: 12.5px; font-weight: 700; color: var(--text-main); }
+
+.month-cell-badge {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 800;
+  color: var(--text-on-blue);
+  background: var(--accent-alert);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .month-cell.is-outside .month-cell-num { color: var(--text-dim); opacity: .5; }
 .month-cell.is-today .month-cell-num { color: var(--gu-blue); }
 
 .month-cell.is-selected { background: var(--gu-blue); }
 .month-cell.is-selected .month-cell-num { color: var(--text-on-blue); }
-.month-cell.is-selected .strip-dot { background: rgba(255, 255, 255, 0.85) !important; }
 
-.month-cell-dots { display: flex; gap: 2px; height: 5px; }
+.month-cell-chips { display: flex; flex-direction: column; gap: 2px; min-height: 30px; }
+
+.month-cell-chip {
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 1px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-on-blue);
+  background: var(--gu-light-blue);
+}
+.month-cell-chip.priority-high { background: var(--accent-alert); }
+.month-cell-chip.priority-medium { background: var(--accent-amber); }
+.month-cell-chip.priority-low { background: var(--accent-success); }
+.month-cell-chip.source-outlook { background: #0F6CBD; }
+
+.month-cell.is-selected .month-cell-chip {
+  background: rgba(255, 255, 255, 0.28) !important;
+  color: var(--text-on-blue);
+}
+
+.month-cell-more {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding-left: 2px;
+}
+.month-cell.is-selected .month-cell-more { color: rgba(255, 255, 255, 0.75); }
 
 /* ============ REMINDERS WITHIN A DAY (Calendar tab) ============ */
 .agenda-reminders {
@@ -1137,84 +1262,267 @@ main {
   letter-spacing: .05em;
 }
 
-/* ============ DAY AGENDA (Calendar tab) ============ */
-.agenda {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.agenda-event {
+/* ============ HEADER (Calendar tab, Outlook-mobile style) ============ */
+.cal-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 13px 14px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-dim);
-  border-left: 4px solid var(--accent-success);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  box-shadow: var(--shadow-card);
-  transition: all 0.2s var(--ease-out);
+  margin-bottom: 14px;
 }
 
-.agenda-event:hover { transform: translateY(-1px); }
-.agenda-event.dimmed { opacity: 0.35; }
-
-.agenda-event.priority-high { border-left-color: var(--accent-alert); }
-.agenda-event.priority-medium { border-left-color: var(--accent-amber); }
-.agenda-event.priority-low { border-left-color: var(--accent-success); }
-
-.agenda-event-time {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-dim);
-  width: 52px;
+.cal-header-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gu-blue);
+  color: var(--text-on-blue);
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.agenda-event-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cal-header-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
-.agenda-event-title {
-  font-size: 14px;
-  font-weight: 700;
+.cal-header-title {
+  font-family: var(--font-display, var(--font-sans));
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--text-main);
+  line-height: 1.15;
+}
+
+.cal-header-sub { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+.cal-header-search-btn { flex-shrink: 0; }
+
+/* ============ DAY NAV (Day view) ============ */
+.day-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px;
+  margin-bottom: 12px;
+}
+
+.day-nav-label { font-size: 14px; font-weight: 800; color: var(--text-main); }
+.day-nav-label.is-today { color: var(--gu-blue); }
+
+/* ============ ALL-DAY ROW (Outlook events marked all-day) ============ */
+.allday-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.allday-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-on-blue);
+  background: #0F6CBD;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* ============ TIME GRID (Day/Week/Month selected-day view) ============ */
+.time-grid-wrap {
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.time-grid { position: relative; }
+
+.time-row {
+  display: flex;
+  border-top: 1px solid var(--border-dim);
+}
+.time-row:first-child { border-top: none; }
+
+.time-row-label {
+  width: 50px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: right;
+  padding: 3px 8px 0 0;
+  transform: translateY(-7px);
+}
+
+.time-row-slot {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--border-dim);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.time-row-slot:hover { background: var(--bg-surface-alt); }
+
+.time-now-line {
+  position: absolute;
+  left: 50px;
+  right: 0;
+  height: 0;
+  border-top: 2px solid var(--accent-alert);
+  z-index: 3;
+  pointer-events: none;
+}
+.time-now-dot {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-alert);
+}
+
+.time-event {
+  position: absolute;
+  left: 54px;
+  right: 6px;
+  border-radius: 7px;
+  padding: 3px 8px;
+  overflow: hidden;
+  color: var(--text-on-blue);
+  background: var(--gu-light-blue);
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(16, 26, 46, 0.18);
+  transition: filter 0.15s var(--ease-out);
+}
+.time-event:hover { filter: brightness(1.05); }
+.time-event.dimmed { opacity: 0.3; }
+
+.time-event.priority-high { background: var(--accent-alert); }
+.time-event.priority-medium { background: var(--accent-amber); }
+.time-event.priority-low { background: var(--accent-success); }
+.time-event.source-outlook { background: #0F6CBD; }
+
+.time-event-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.time-event-sub {
+  font-size: 9.5px;
+  opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.agenda-event-course {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-dim);
+/* ============ FLOATING ADD BUTTON ============ */
+.cal-fab {
+  position: fixed;
+  /* Fixed-position elements anchor to the real viewport, not to .app's
+     centered max-width column — so this can't just say `right: 20px`, or
+     on any viewport wider than the app (this preview canvas, a desktop
+     browser) it drifts off to the true edge of the screen instead of the
+     app's own right edge. Center on the viewport the same way `nav` does,
+     then offset by half the app's max-width so it lands at the app
+     column's right edge regardless of viewport width. */
+  left: 50%;
+  transform: translateX(calc(430px / 2 - 20px - 52px));
+  bottom: calc(90px + var(--safe-bottom));
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--gu-blue);
+  color: var(--text-on-blue);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-dock);
+  cursor: pointer;
+  z-index: 150;
+  touch-action: manipulation;
+  transition: transform 0.15s var(--ease-out);
+}
+.cal-fab:active { transform: translateX(calc(430px / 2 - 20px - 52px)) scale(0.94); }
+
+/* ============ QUICK-ADD SHEET (Outlook-style tap-to-create) ============ */
+.quick-add-overlay {
+  position: fixed;
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: rgba(8, 12, 22, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 210;
 }
 
-.agenda-event-stamp { flex-shrink: 0; margin: 0; text-transform: capitalize; }
+.quick-add-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 20px calc(22px + var(--safe-bottom));
+  box-shadow: var(--shadow-dock);
+}
 
-.agenda-gap {
+.quick-add-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-hi);
+  margin: 0 auto 14px;
+}
+
+.quick-add-title {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  padding: 6px 0 !important;
+  margin: 0 !important;
+}
+.quick-add-title:focus { box-shadow: none !important; }
+
+.quick-add-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 14px;
-  background: transparent;
-  border: 1px dashed var(--border-hi);
-  border-radius: var(--radius-md);
-  color: var(--text-dim);
-  font-size: 11.5px;
+  color: var(--text-muted);
+  font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: all 0.2s var(--ease-out);
+  margin: 8px 0 6px;
 }
 
-.agenda-gap:hover {
-  color: var(--gu-blue);
-  border-color: var(--gu-blue);
-  background: var(--gu-blue-tint);
+.quick-add-more {
+  align-self: flex-start;
+  padding: 6px 0 !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: var(--gu-blue) !important;
 }
 
+/* ============ EVENT DETAIL CARD ============ */
 .event-popup-overlay {
   position: fixed;
   inset: 0;
@@ -1230,37 +1538,63 @@ main {
   padding: calc(20px + var(--safe-top)) calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left));
 }
 
-.event-popup {
+.event-card {
   width: 100%;
   max-width: 340px;
   background: var(--bg-surface);
   border: 1px solid var(--border-hi);
+  border-left: 5px solid var(--accent-success);
   border-radius: var(--radius-xl);
-  padding: 24px;
+  padding: 22px;
   box-shadow: var(--shadow-dock);
 }
 
-.event-popup h4 {
+.event-card.priority-high { border-left-color: var(--accent-alert); }
+.event-card.priority-medium { border-left-color: var(--accent-amber); }
+.event-card.priority-low { border-left-color: var(--accent-success); }
+.event-card.source-outlook { border-left-color: #0F6CBD; }
+
+.event-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.event-card-head h4 {
   font-size: 17px;
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: -0.01em;
+  margin: 0;
 }
 
-.event-popup-subtitle {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--gu-blue);
-  margin-top: 4px;
-  letter-spacing: .02em;
+.event-card-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
 }
+.event-card-row svg { flex-shrink: 0; color: var(--text-dim); }
 
-.event-popup-body {
+.event-card-body {
   font-size: 13.5px;
   color: var(--text-muted);
   line-height: 1.6;
-  margin: 14px 0;
+  margin: 6px 0 14px;
   white-space: pre-wrap;
+}
+
+.stamp.badge-outlook {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #0F6CBD;
+  background: #EAF3FC;
+  border: 1px solid rgba(15, 108, 189, 0.22);
 }
 
 /* ============ MORE — bottom sheet ============ */

@@ -13,9 +13,11 @@ import Clubs from './components/Clubs';
 import Announcements from './components/Announcements';
 import Campus from './components/Campus';
 import Profile from './components/Profile';
+import Motivation from './components/Motivation';
 import More from './components/More';
 import Logo from './components/Logo';
 import { checkInStreak } from './lib/streak';
+import { RETURN_TAB_KEY } from './lib/outlook';
 import { HomeIcon, AskIcon, CalendarIcon, NotesIcon, MoreIcon } from './components/Icons';
 
 // Only these five live in the bottom bar (Nielsen/Apple guidance caps it at
@@ -27,12 +29,19 @@ const PRIMARY_TABS = [
   { tab: 'calendar', label: 'Calendar', Icon: CalendarIcon },
   { tab: 'notes', label: 'Notes', Icon: NotesIcon },
 ];
-const SECONDARY_TABS = new Set(['study', 'projects', 'due', 'grades', 'clubs', 'announcements', 'campus', 'profile']);
+const SECONDARY_TABS = new Set(['study', 'projects', 'due', 'grades', 'clubs', 'announcements', 'campus', 'profile', 'motivation']);
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState('home');
+  // Outlook sign-in is a full-page redirect (see src/lib/outlook.js) — this
+  // remounts the whole app, so the tab the student was on before clicking
+  // "Sync Outlook" gets stashed in sessionStorage and restored here.
+  const [tab, setTab] = useState(() => {
+    const returnTab = sessionStorage.getItem(RETURN_TAB_KEY);
+    if (returnTab) sessionStorage.removeItem(RETURN_TAB_KEY);
+    return returnTab || 'home';
+  });
   const [pending, setPending] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
   const [streak, setStreak] = useState(null);
@@ -85,7 +94,7 @@ export default function App() {
       </header>
 
       <main>
-        {tab === 'home' && <Home who={who} onNavigate={goTo} streak={streak} />}
+        {tab === 'home' && <Home who={who} onNavigate={goTo} />}
         {tab === 'ask' && <Chat userId={uid} />}
         {tab === 'calendar' && <Calendar userId={uid} />}
         {tab === 'notes' && <Notes userId={uid} />}
@@ -97,6 +106,7 @@ export default function App() {
         {tab === 'announcements' && <Announcements />}
         {tab === 'campus' && <Campus />}
         {tab === 'profile' && <Profile userId={uid} email={email} />}
+        {tab === 'motivation' && <Motivation />}
       </main>
 
       <nav>

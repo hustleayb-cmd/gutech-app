@@ -64,3 +64,6 @@ export const BoardIcon = (p) => <Icon {...p}><rect x="3.5" y="4" width="17" heig
 export const SparkleIcon = (p) => <Icon {...p}><path d="M12 3.5 13.4 9l5.6 1.4-5.6 1.4L12 17.5l-1.4-5.7L5 10.4 10.6 9Z" /><path d="M19 3.5l.6 2 2 .6-2 .6-.6 2-.6-2-2-.6 2-.6ZM5 16l.5 1.7 1.7.5-1.7.5L5 20.5l-.5-1.8-1.7-.5 1.7-.5Z" /></Icon>;
 export const StreakIcon = (p) => <Icon {...p}><path d="M12 2.5c1.5 3 .5 4.5-.5 6-1.5 2-3 3.5-3 6.3A5.5 5.5 0 0 0 14 20a5 5 0 0 0 1.6-9.7c.2 1.3-.2 2.2-1 2.7.4-2.6-.4-4-1.6-5.4-.3 1-1 1.6-1.9 1.3.3-2-.2-3.8.9-6.4Z" /></Icon>;
 export const ChatBubbleIcon = (p) => <Icon {...p}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7A2.5 2.5 0 0 1 17.5 15H9l-3.5 3.2V15H6.5A2.5 2.5 0 0 1 4 12.5Z" /></Icon>;
+export const SyncIcon = (p) => <Icon {...p}><path d="M4 12a8 8 0 0 1 13.66-5.66M20 12a8 8 0 0 1-13.66 5.66" /><path d="M17 3v4h-4M7 21v-4h4" /></Icon>;
+export const SearchIcon = (p) => <Icon {...p}><circle cx="10.5" cy="10.5" r="6.5" /><path d="M19.5 19.5 15 15" /></Icon>;
+export const QuoteIcon = (p) => <Icon {...p}><path d="M4.5 8.5a3.5 3.5 0 0 1 3.5-3.5" /><path d="M4.5 8.5v4a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-3Z" /><path d="M13.5 8.5a3.5 3.5 0 0 1 3.5-3.5" /><path d="M13.5 8.5v4a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-3Z" /></Icon>;

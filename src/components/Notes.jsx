@@ -1,7 +1,23 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { CalendarIcon, NotesIcon, BookIcon, TimerIcon, TrashIcon } from './Icons';
 
 const PRIORITY_WEIGHTS = { high: 1, medium: 2, low: 3 };
+const PRIORITY_LABELS = { high: 'High', medium: 'Medium', low: 'Low' };
+
+// "2026-08-22" + "08:00" → "Sat, Aug 22 · 8:00 AM" — one readable line
+// instead of a raw ISO date and 24-hour time.
+function formatSchedule(dateStr, timeStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const dateLabel = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  if (!timeStr) return dateLabel;
+  const [h, m] = timeStr.split(':').map(Number);
+  const period = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const timeLabel = `${h12}${m ? `:${String(m).padStart(2, '0')}` : ''} ${period}`;
+  return `${dateLabel} · ${timeLabel}`;
+}
 
 export default function Notes({ userId }) {
   const [notes, setNotes] = useState([]);
@@ -121,13 +137,14 @@ export default function Notes({ userId }) {
               <div className={`timeline-card priority-${matchingNote.priority || 'low'}`}>
                 <div className="row" style={{ alignItems: 'flex-start' }}>
                   <div>
-                    <span className={`stamp badge-${matchingNote.priority || 'low'}`}>
-                      {(matchingNote.priority || 'low').toUpperCase()} {matchingNote.course ? `· ${matchingNote.course}` : ''} · 🕒 {matchingNote.scheduled_time}
-                    </span>
+                    <span className={`stamp badge-${matchingNote.priority || 'low'}`}>{PRIORITY_LABELS[matchingNote.priority] || 'Low'}</span>
                     <h4 className="timeline-title">{matchingNote.title}</h4>
+                    {matchingNote.course && <span className="event-card-row"><BookIcon size={12} /> {matchingNote.course}</span>}
                     {matchingNote.body && <p className="timeline-body">{matchingNote.body}</p>}
                   </div>
-                  <button className="ghost" onClick={() => remove(matchingNote.id)}>Delete</button>
+                  <button className="ghost icon-btn" onClick={() => remove(matchingNote.id)} aria-label={`Delete ${matchingNote.title}`}>
+                    <TrashIcon size={13} />
+                  </button>
                 </div>
               </div>
             ) : (
@@ -145,7 +162,7 @@ export default function Notes({ userId }) {
       <div className="annot" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Notes & Schedule</span>
         <button className="ghost" onClick={() => setShowCalendar(!showCalendar)}>
-          {showCalendar ? '📋 View All Notes' : '📅 24H Timetable'}
+          {showCalendar ? <><NotesIcon size={14} /> View All Notes</> : <><CalendarIcon size={14} /> 24H Timetable</>}
         </button>
       </div>
 
@@ -191,9 +208,9 @@ export default function Notes({ userId }) {
 
               <label htmlFor="np">Priority</label>
               <select id="np" value={priority} onChange={e => setPriority(e.target.value)}>
-                <option value="high">🔥 High Priority</option>
-                <option value="medium">⚡ Medium Priority</option>
-                <option value="low">🌱 Low Priority</option>
+                <option value="high">High Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="low">Low Priority</option>
               </select>
 
               <label htmlFor="nb">Note</label>
@@ -220,13 +237,24 @@ export default function Notes({ userId }) {
           <div style={{ marginTop: 14 }}>
             {notes.map(n => (
               <div className={`card priority-${n.priority || 'low'}`} key={n.id}>
-                <div className="row">
+                <div className="row" style={{ alignItems: 'flex-start' }}>
                   <h3>{n.title}</h3>
-                  <button className="ghost" onClick={() => remove(n.id)}>Delete</button>
+                  <button className="ghost icon-btn" onClick={() => remove(n.id)} aria-label={`Delete ${n.title}`}>
+                    <TrashIcon size={14} />
+                  </button>
                 </div>
-                <div className={`stamp badge-${n.priority || 'low'}`} style={{ marginTop: 4 }}>
-                  {(n.priority || 'low').toUpperCase()} {n.course ? `· ${n.course} ` : ''}· 📅 {n.scheduled_date} {n.scheduled_time ? `at ${n.scheduled_time}` : ''}
+
+                <span className={`stamp badge-${n.priority || 'low'}`}>{PRIORITY_LABELS[n.priority] || 'Low'}</span>
+
+                <div className="note-meta">
+                  {n.course && (
+                    <span className="event-card-row"><BookIcon size={13} /> {n.course}</span>
+                  )}
+                  {n.scheduled_date && (
+                    <span className="event-card-row"><TimerIcon size={13} /> {formatSchedule(n.scheduled_date, n.scheduled_time)}</span>
+                  )}
                 </div>
+
                 {n.body && <p>{n.body}</p>}
               </div>
             ))}

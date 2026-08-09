@@ -4,3 +4,5 @@ dist
 .env.local
 *.log
 .claude/settings.local.json
+
+.vercel

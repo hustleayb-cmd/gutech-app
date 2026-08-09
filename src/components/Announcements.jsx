@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { MegaphoneIcon, PinIcon } from './Icons';
+import AnnouncementArt from './AnnouncementArt';
 
 const CATEGORY_LABEL = { general: 'General', academic: 'Academic', event: 'Event', deadline: 'Deadline' };
 
@@ -53,15 +54,18 @@ export default function Announcements() {
       <div style={{ marginTop: 14 }}>
         {visible.map(a => (
           <div className={`card announcement-card cat-${a.category}`} key={a.id}>
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div className="row" style={{ gap: 8, justifyContent: 'flex-start' }}>
-                {a.pinned && <PinIcon size={14} className="pin-icon" />}
-                <span className={`stamp badge-cat-${a.category}`}>{CATEGORY_LABEL[a.category] ?? a.category}</span>
+            <AnnouncementArt category={a.category} seedKey={a.id ?? a.title} />
+            <div className="announcement-card-body">
+              <div className="row" style={{ alignItems: 'flex-start' }}>
+                <div className="row" style={{ gap: 8, justifyContent: 'flex-start' }}>
+                  {a.pinned && <PinIcon size={14} className="pin-icon" />}
+                  <span className={`stamp badge-cat-${a.category}`}>{CATEGORY_LABEL[a.category] ?? a.category}</span>
+                </div>
+                <span className="announcement-date">{fmt(a.created_at)}</span>
               </div>
-              <span className="announcement-date">{fmt(a.created_at)}</span>
+              <h3 style={{ marginTop: 10 }}>{a.title}</h3>
+              {a.body && <p>{a.body}</p>}
             </div>
-            <h3 style={{ marginTop: 10 }}>{a.title}</h3>
-            {a.body && <p>{a.body}</p>}
           </div>
         ))}
       </div>

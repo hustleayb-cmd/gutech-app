@@ -193,8 +193,13 @@ create table if not exists clubs (
   name text not null,
   category text not null default 'general', -- sport | tech | arts | music | business | culture | academic | volunteering | general
   description text not null default '',
+  contact_email text not null default '', -- where "Join" emails go, via the student's own connected Outlook account
   created_at timestamptz not null default now()
 );
+
+-- safe to re-run on a database that already has the table from before
+-- this column existed
+alter table clubs add column if not exists contact_email text not null default '';
 
 alter table clubs enable row level security;
 
@@ -202,15 +207,15 @@ drop policy if exists "clubs select signed in" on clubs;
 create policy "clubs select signed in" on clubs
   for select using (auth.role() = 'authenticated');
 
-insert into clubs (name, category, description) values
-  ('Football Club', 'sport', 'Weekly matches and a campus league — all skill levels welcome.'),
-  ('Robotics Club', 'tech', 'Design, build and compete with autonomous robots.'),
-  ('Photography Club', 'arts', 'Campus photo walks, editing workshops and exhibitions.'),
-  ('Music Society', 'music', 'Jam sessions, open mic nights and the end-of-year showcase.'),
-  ('Entrepreneurship Club', 'business', 'Pitch practice, startup mentoring and founder talks.'),
-  ('Cultural Exchange Club', 'culture', 'Celebrating GUtech''s international student community.'),
-  ('Debate Society', 'academic', 'Weekly debates and public speaking practice.'),
-  ('Community Outreach', 'volunteering', 'Volunteering days across Muscat and Halban.')
+insert into clubs (name, category, description, contact_email) values
+  ('Sports Club', 'sport', 'GUtech''s student sports club — matches, training and campus fitness.', 'sports.club@gutech.edu.om'),
+  ('AGEO Club', 'academic', 'GUtech''s AGEO student club.', 'AGEO.Club@gutech.edu.om'),
+  ('Computer Science Club', 'tech', 'GUtech''s student club for Computer Science.', 'ComputerScience.Club@gutech.edu.om'),
+  ('UPAD Club', 'academic', 'GUtech''s UPAD student club.', 'upad.club@gutech.edu.om'),
+  ('Theatre Club', 'arts', 'GUtech''s student theatre and drama club.', 'Theatre.Club@gutech.edu.om'),
+  ('Event Management Club', 'business', 'GUtech''s student club for event planning and management.', 'eventmanagement.club@gutech.edu.om'),
+  ('Logistics Club', 'business', 'GUtech''s student club for logistics and supply chain.', 'logistics.club@gutech.edu.om'),
+  ('Entrepreneurship Club', 'business', 'GUtech''s student club for entrepreneurship and startups.', 'business.club@gutech.edu.om')
 on conflict do nothing;
 
 -- ---------- MEMBERSHIPS — who's joined what ----------
@@ -226,6 +231,7 @@ create table if not exists club_memberships (
   full_name text not null default '',
   student_id text not null default '',
   program text not null default '',
+  status text not null default 'pending', -- pending | accepted | declined — flipped by the n8n acceptance-email automation, not the app itself
   joined_at timestamptz not null default now(),
   unique (user_id, club_id)
 );
@@ -235,6 +241,7 @@ create table if not exists club_memberships (
 alter table club_memberships add column if not exists full_name text not null default '';
 alter table club_memberships add column if not exists student_id text not null default '';
 alter table club_memberships add column if not exists program text not null default '';
+alter table club_memberships add column if not exists status text not null default 'pending';
 
 create index if not exists idx_memberships_user on club_memberships(user_id);
 create index if not exists idx_memberships_club on club_memberships(club_id);

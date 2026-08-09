@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { computeGPA } from '../lib/gpa';
-import { BellIcon, ChartIcon, MegaphoneIcon, BookIcon, IdCardIcon, GlobeIcon, InstagramIcon, StreakIcon } from './Icons';
+import { BellIcon, MegaphoneIcon, BookIcon, IdCardIcon, GlobeIcon, InstagramIcon } from './Icons';
+import AnnouncementArt from './AnnouncementArt';
+import Motivation from './Motivation';
 
 // External systems students actually need quick access to, not internal
 // tabs — those already have their own bottom-nav buttons.
@@ -12,24 +13,21 @@ const QUICK_LINKS = [
   { href: 'https://www.instagram.com/gutech_oman?igsh=MTduM3F0dmFybWM5cg==', label: 'Instagram', Icon: InstagramIcon },
 ];
 
-export default function Home({ who, onNavigate, streak }) {
+export default function Home({ who, onNavigate }) {
   const [due, setDue] = useState([]);
   const [announcement, setAnnouncement] = useState(null);
-  const [gpa, setGpa] = useState(null);
   const [err, setErr] = useState('');
 
   useEffect(() => { load(); }, []);
 
   async function load() {
-    const [r, a, g] = await Promise.all([
+    const [r, a] = await Promise.all([
       supabase.from('reminders').select('*').eq('done', false).order('due_at', { ascending: true }).limit(3),
       supabase.from('announcements').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(1),
-      supabase.from('grades').select('grade, credit_hours'),
     ]);
     if (r.error) setErr(r.error.message);
     setDue(r.data ?? []);
     setAnnouncement(a.data?.[0] ?? null);
-    setGpa(g.data ? computeGPA(g.data) : null);
   }
 
   const fmt = t => new Date(t).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
@@ -50,23 +48,7 @@ export default function Home({ who, onNavigate, streak }) {
 
       {err && <div className="notice err">{err}</div>}
 
-      <div className="home-stats">
-        <div className="card home-stat-card">
-          <div className="home-stat-icon"><BellIcon size={18} /></div>
-          <span className="home-stat-num">{due.length}</span>
-          <span className="home-stat-label">Due soon</span>
-        </div>
-        <div className="card home-stat-card">
-          <div className="home-stat-icon"><ChartIcon size={18} /></div>
-          <span className="home-stat-num">{gpa && gpa.hours > 0 ? gpa.gpa.toFixed(2) : '—'}</span>
-          <span className="home-stat-label">GPA</span>
-        </div>
-        <div className="card home-stat-card">
-          <div className="home-stat-icon"><StreakIcon size={18} /></div>
-          <span className="home-stat-num">{streak ?? '—'}</span>
-          <span className="home-stat-label">Day streak</span>
-        </div>
-      </div>
+      <Motivation />
 
       <div className="annot">Quick links</div>
       <div className="quick-links">
@@ -99,11 +81,14 @@ export default function Home({ who, onNavigate, streak }) {
         <>
           <div className="annot">Latest announcement</div>
           <div className={`card announcement-card cat-${announcement.category}`} onClick={() => onNavigate('announcements')} role="button" tabIndex={0}>
-            <div className="row" style={{ gap: 8, justifyContent: 'flex-start' }}>
-              <MegaphoneIcon size={16} />
-              <h3 style={{ fontSize: 15 }}>{announcement.title}</h3>
+            <AnnouncementArt category={announcement.category} seedKey={announcement.id ?? announcement.title} />
+            <div className="announcement-card-body">
+              <div className="row" style={{ gap: 8, justifyContent: 'flex-start' }}>
+                <MegaphoneIcon size={16} />
+                <h3 style={{ fontSize: 15 }}>{announcement.title}</h3>
+              </div>
+              {announcement.body && <p>{announcement.body}</p>}
             </div>
-            {announcement.body && <p>{announcement.body}</p>}
           </div>
         </>
       )}

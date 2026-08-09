@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { BellIcon, ChartIcon, MegaphoneIcon, MapPinIcon, UserIcon, UsersIcon, SignOutIcon, CloseIcon, TimerIcon, BoardIcon } from './Icons';
+import { BellIcon, ChartIcon, MegaphoneIcon, MapPinIcon, UserIcon, UsersIcon, SignOutIcon, CloseIcon, TimerIcon, BoardIcon, QuoteIcon } from './Icons';
 
 const ITEMS = [
   { tab: 'study', label: 'Study Room', hint: 'Focus timer & courses', Icon: TimerIcon },
@@ -8,6 +8,7 @@ const ITEMS = [
   { tab: 'grades', label: 'Grades', hint: 'Courses & GPA', Icon: ChartIcon },
   { tab: 'clubs', label: 'Clubs', hint: 'Join a club', Icon: UsersIcon },
   { tab: 'announcements', label: 'Announcements', hint: 'Campus news', Icon: MegaphoneIcon },
+  { tab: 'motivation', label: 'Motivation', hint: 'A quote for today', Icon: QuoteIcon },
   { tab: 'campus', label: 'Campus', hint: 'Map & services', Icon: MapPinIcon },
   { tab: 'profile', label: 'Profile', hint: 'Your student ID', Icon: UserIcon },
 ];
