@@ -130,7 +130,9 @@ export default function Clubs({ userId, email, onNavigate }) {
 
   async function load() {
     const [c, m, p] = await Promise.all([
-      supabase.from('clubs').select('*').order('name', { ascending: true }),
+      // is_pinned first (e.g. Testing Club, for quickly re-testing the join
+      // flow without scrolling past the real roster), then alphabetical.
+      supabase.from('clubs').select('*').order('is_pinned', { ascending: false }).order('name', { ascending: true }),
       supabase.from('club_memberships').select('id, club_id, status').eq('user_id', userId),
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
     ]);
@@ -360,15 +362,22 @@ export default function Clubs({ userId, email, onNavigate }) {
                     key={club.id}
                     data-club-id={club.id}
                     ref={el => { if (el) panelRefs.current.set(club.id, el); else panelRefs.current.delete(club.id); }}
-                    className={`club-panel ${meta.anim} ${revealed ? 'in-view' : ''}`}
+                    className={`club-panel ${meta.anim} ${revealed ? 'in-view' : ''} ${club.image_url ? 'has-photo' : ''}`}
                   >
-                    <span
-                      className="club-panel-bg-icon"
-                      style={{ color: meta.color }}
-                      ref={el => { if (el) bgIconRefs.current.set(club.id, el); else bgIconRefs.current.delete(club.id); }}
-                    >
-                      <Icon size={220} />
-                    </span>
+                    {club.image_url ? (
+                      <>
+                        <img className="club-panel-photo" src={club.image_url} alt="" loading="lazy" />
+                        <span className="club-panel-photo-scrim" />
+                      </>
+                    ) : (
+                      <span
+                        className="club-panel-bg-icon"
+                        style={{ color: meta.color }}
+                        ref={el => { if (el) bgIconRefs.current.set(club.id, el); else bgIconRefs.current.delete(club.id); }}
+                      >
+                        <Icon size={220} />
+                      </span>
+                    )}
 
                     <div className="club-panel-content">
                       <span className={`club-panel-icon ${meta.tint}`}>

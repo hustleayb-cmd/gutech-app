@@ -200,6 +200,21 @@ create table if not exists clubs (
 -- safe to re-run on a database that already has the table from before
 -- this column existed
 alter table clubs add column if not exists contact_email text not null default '';
+-- pinned clubs sort first, ahead of the alphabetical roster — used for
+-- Testing Club so it's always the first panel, for repeatedly testing the
+-- n8n join-status automation without scrolling
+alter table clubs add column if not exists is_pinned boolean not null default false;
+-- cover photo shown as the panel's hero image (storage bucket
+-- "club-images", public read) instead of the generic category watermark
+-- once a club has one
+alter table clubs add column if not exists image_url text;
+
+-- public bucket for club cover photos — public because these are the
+-- same photos clubs already post on their own social pages
+insert into storage.buckets (id, name, public) values ('club-images', 'club-images', true) on conflict (id) do nothing;
+drop policy if exists "club images public read" on storage.objects;
+create policy "club images public read" on storage.objects
+  for select using (bucket_id = 'club-images');
 
 alter table clubs enable row level security;
 
@@ -215,8 +230,21 @@ insert into clubs (name, category, description, contact_email) values
   ('Theatre Club', 'arts', 'GUtech''s student theatre and drama club.', 'Theatre.Club@gutech.edu.om'),
   ('Event Management Club', 'business', 'GUtech''s student club for event planning and management.', 'eventmanagement.club@gutech.edu.om'),
   ('Logistics Club', 'business', 'GUtech''s student club for logistics and supply chain.', 'logistics.club@gutech.edu.om'),
-  ('Entrepreneurship Club', 'business', 'GUtech''s student club for entrepreneurship and startups.', 'business.club@gutech.edu.om')
+  ('Entrepreneurship Club', 'business', 'GUtech''s student club for entrepreneurship and startups.', 'business.club@gutech.edu.om'),
+  ('Testing Club', 'general', 'Internal test club used to verify the join flow.', 'hustle.ayb@outlook.com'),
+  ('Music Club', 'music', 'GUtech''s student music club — performances, sound and campus events.', 'music.club@gutech.edu.om'),
+  ('Engineering Club', 'tech', 'GUtech''s student engineering club — 3D printing, builds and hands-on projects.', 'engineering.club@gutech.edu.om')
 on conflict do nothing;
+
+-- cover photos, pulled from each club's own event/promo material and
+-- hosted in the public "club-images" storage bucket
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/ageo.jpg' where name = 'AGEO Club';
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/cs.jpg' where name = 'Computer Science Club';
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/sport.jpg' where name = 'Sports Club';
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/music.jpg' where name = 'Music Club';
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/eng.jpg' where name = 'Engineering Club';
+
+update clubs set is_pinned = true where name = 'Testing Club';
 
 -- ---------- MEMBERSHIPS — who's joined what ----------
 -- Private per student: you can only see, add and remove your own

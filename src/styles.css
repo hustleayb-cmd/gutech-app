@@ -1,42 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 /* Course Planner's own pairing — scoped under .cp-scope, doesn't touch
    the rest of the app's Plus Jakarta Sans / GUtech-blue system. */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* GUtech brand blues, pulled from the university wordmark */
+  /* GUtech brand blues, pulled from the university wordmark — unchanged
+     by the cinematic retheme below, on purpose. Everything else moved to
+     a near-void dark canvas; blue is now the single "lamp" accent that
+     pops against it instead of one hue among many on a white page. */
   --gu-blue:        #0057A8;
   --gu-blue-dark:   #003E7A;
-  --gu-blue-tint:   #E7EFFA;
+  --gu-blue-tint:   #122642;
   --gu-light-blue:  #8CA6D6;
 
-  --bg-base:        #F3F6FB;
-  --bg-surface:     #FFFFFF;
-  --bg-surface-alt: #EDF1F9;
-  --bg-surface-hi:  #E4EAF5;
+  /* Cinematic dark canvas — near-black, faintly blue rather than pure
+     #000 so it still reads as "GUtech" and not generic dark mode.
+     Each surface step is a tone shift, not a shadow, per the reference. */
+  --bg-base:        #05070C;
+  --bg-surface:     #10141D;
+  --bg-surface-alt: #161C29;
+  --bg-surface-hi:  #1E2637;
 
-  --border-dim:     #E3E8F1;
-  --border-hi:      #CBD5E6;
+  --border-dim:     #202839;
+  --border-hi:      #2C3750;
 
-  --text-main:      #101A2E;
-  --text-muted:     #57607A;
-  --text-dim:       #8993AC;
+  --text-main:      #F4F6FB;
+  --text-muted:     #9BA5C0;
+  --text-dim:       #656F8C;
   --text-on-blue:   #FFFFFF;
 
   --accent-primary: var(--gu-blue);
-  --accent-second:  var(--gu-light-blue);
-  --accent-success: #1F9D6B;
-  --accent-alert:   #D6455A;
-  --accent-amber:   #C9860B;
+  --accent-second:  #9FB6E0;
+  --accent-success: #2FBE85;
+  --accent-alert:   #E15A72;
+  --accent-amber:   #E0A339;
   --accent-info:    var(--gu-light-blue);
 
   --cat-general:    var(--gu-blue);
-  --cat-academic:   #6B5CD6;
-  --cat-event:      #1F9D6B;
-  --cat-deadline:   #C9860B;
+  --cat-academic:   #8B7EF0;
+  --cat-event:      #2FBE85;
+  --cat-deadline:   #E0A339;
 
-  --shadow-card:    0 10px 28px -10px rgba(16, 26, 46, 0.12);
-  --shadow-dock:    0 16px 36px -6px rgba(16, 26, 46, 0.22);
+  --shadow-card:    0 12px 32px -10px rgba(0, 0, 0, 0.55);
+  --shadow-dock:    0 20px 44px -6px rgba(0, 0, 0, 0.6);
 
   --font-sans:      'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono:      'JetBrains Mono', ui-monospace, monospace;
@@ -54,28 +60,6 @@
   --safe-bottom:    env(safe-area-inset-bottom, 0px);
   --safe-left:      env(safe-area-inset-left, 0px);
   --safe-right:     env(safe-area-inset-right, 0px);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-base:        #0C1220;
-    --bg-surface:     #131B2C;
-    --bg-surface-alt: #17203380;
-    --bg-surface-hi:  #1C2740;
-
-    --border-dim:     #22304A;
-    --border-hi:      #2E3F5E;
-
-    --text-main:      #F3F6FC;
-    --text-muted:     #A7B2CC;
-    --text-dim:       #6B7794;
-
-    --gu-blue-tint:   #16233D;
-    --accent-second:  #9FB6E0;
-
-    --shadow-card:    0 12px 32px -8px rgba(0, 0, 0, 0.5);
-    --shadow-dock:    0 20px 40px rgba(0, 0, 0, 0.55);
-  }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -132,7 +116,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(5, 7, 12, 0.82);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-dim);
@@ -140,10 +124,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-@media (prefers-color-scheme: dark) {
-  .titleblock { background: rgba(19, 27, 44, 0.85); }
 }
 
 .header-right { display: flex; align-items: center; gap: 10px; }
@@ -406,17 +386,13 @@ main {
   display: flex;
   gap: 8px;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(16, 20, 29, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-hi);
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-dock);
   z-index: 90;
-}
-
-@media (prefers-color-scheme: dark) {
-  .composer { background: rgba(19, 27, 44, 0.92); }
 }
 
 .composer input {
@@ -447,9 +423,9 @@ main {
 .composer button:not(:disabled):hover { background: var(--gu-blue-dark); }
 
 /* ============ HOME DASHBOARD ============ */
-.home-greeting { padding: 18px 2px 4px; }
-.home-greeting h2 { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
-.home-greeting p { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
+.home-greeting { padding: 22px 2px 4px; }
+.home-greeting h2 { font-size: 28px; font-weight: 300; letter-spacing: -0.02em; color: var(--text-main); }
+.home-greeting p { font-size: 13.5px; color: var(--text-muted); margin-top: 6px; }
 
 .home-stats {
   display: grid;
@@ -684,6 +660,26 @@ main {
   pointer-events: none;
   will-change: transform;
 }
+
+/* Clubs with a real cover photo — full-bleed image with a bottom scrim,
+   never raw text on photography per the cinematic reference. */
+.club-panel.has-photo { background: #000; }
+.club-panel-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+.club-panel-photo-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.88) 100%);
+}
+.club-panel.has-photo .club-panel-category { color: rgba(255,255,255,0.7); }
+.club-panel.has-photo .club-panel-title { color: #fff; }
+.club-panel.has-photo .club-panel-desc { color: rgba(255,255,255,0.72); }
 
 .club-panel-content {
   position: relative;
@@ -1853,17 +1849,13 @@ nav {
   justify-content: space-between;
   align-items: center;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(16, 20, 29, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-hi);
   border-radius: var(--radius-pill);
   z-index: 100;
   box-shadow: var(--shadow-dock);
-}
-
-@media (prefers-color-scheme: dark) {
-  nav { background: rgba(19, 27, 44, 0.92); }
 }
 
 nav button {
