@@ -243,6 +243,9 @@ update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v
 update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/sport.jpg' where name = 'Sports Club';
 update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/music.jpg' where name = 'Music Club';
 update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/eng.jpg' where name = 'Engineering Club';
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/theatre.jpg' where name = 'Theatre Club';
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/event.jpg' where name = 'Event Management Club';
+update clubs set image_url = 'https://qwtfrfnwhufsnpczfypb.supabase.co/storage/v1/object/public/club-images/enterprise.jpg' where name = 'Entrepreneurship Club';
 
 update clubs set is_pinned = true where name = 'Testing Club';
 
